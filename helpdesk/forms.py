@@ -76,7 +76,7 @@ class CustomFieldMixin(object):
 class EditTicketForm(CustomFieldMixin, forms.ModelForm):
     class Meta:
         model = Ticket
-        exclude = ('created', 'modified', 'status', 'ticket_type', 'on_hold', 'resolution', 'last_escalation', 'assigned_to')
+        exclude = ('created', 'modified', 'status', 'on_hold', 'resolution', 'last_escalation', 'assigned_to')
     
     def __init__(self, *args, **kwargs):
         """
@@ -136,7 +136,13 @@ class TicketForm(CustomFieldMixin, forms.Form):
         max_length=100,
         required=True,
         widget=forms.TextInput(attrs={'size':'60'}),
-        label=_('Summary of the problem'),
+        label=_('Summary of the issue'),
+        )
+
+    ticket_type = forms.ChoiceField(
+        label=_('Ticket Type'),
+        required=True,
+        choices=Ticket.TICKETTYPE_CHOICES,
         )
 
     submitter_email = forms.EmailField(
@@ -215,7 +221,7 @@ class TicketForm(CustomFieldMixin, forms.Form):
                     submitter_email = self.cleaned_data['submitter_email'],
                     created = timezone.now(),
                     status = Ticket.OPEN_STATUS,
-                    ticket_type = Ticket.ISSUE_TICKETTYPE,
+                    ticket_type = self.cleaned_data['ticket_type'],
                     queue = q,
                     description = self.cleaned_data['body'],
                     priority = self.cleaned_data['priority'],
@@ -337,7 +343,13 @@ class PublicTicketForm(CustomFieldMixin, forms.Form):
         max_length=100,
         required=True,
         widget=forms.TextInput(),
-        label=_('Summary of your query'),
+        label=_('Summary of your issue'),
+        )
+
+    ticket_type = forms.ChoiceField(
+        label=_('Ticket Type'),
+        required=True,
+        choices=Ticket.TICKETTYPE_CHOICES,
         )
 
     submitter_email = forms.EmailField(
@@ -401,7 +413,7 @@ class PublicTicketForm(CustomFieldMixin, forms.Form):
             submitter_email = self.cleaned_data['submitter_email'],
             created = timezone.now(),
             status = Ticket.OPEN_STATUS,
-            ticket_type = Ticket.ISSUE_TICKETTYPE,
+            ticket_type = self.cleaned_data['ticket_type'],
             queue = q,
             description = self.cleaned_data['body'],
             priority = self.cleaned_data['priority'],

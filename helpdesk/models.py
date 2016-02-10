@@ -367,7 +367,7 @@ class Ticket(models.Model):
         )
 
     ticket_type = models.IntegerField(
-        _('Status'),
+        _('Ticket Type'),
         choices=TICKETTYPE_CHOICES,
         default=ISSUE_TICKETTYPE,
         )
