@@ -385,11 +385,11 @@ class PublicTicketForm(CustomFieldMixin, forms.Form):
         help_text=_('Please select a priority carefully.'),
         )
 
-    due_date = forms.DateTimeField(
-        widget=extras.SelectDateWidget,
-        required=False,
-        label=_('Due on'),
-        )
+    #due_date = forms.DateTimeField(
+    #    widget=extras.SelectDateWidget,
+    #    required=False,
+    #    label=_('Due on'),
+    #    )
 
     attachment = forms.FileField(
         required=False,

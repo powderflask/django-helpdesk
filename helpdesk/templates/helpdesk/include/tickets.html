@@ -9,9 +9,15 @@
 <tbody>
 {% for ticket in ticket_list %}
 <tr class="{{ ticket.get_priority_css_class }}">
-<th><a href='{{ ticket.get_absolute_url }}'>{{ ticket.ticket }}</a></th>
+<th><a href={% if user.is_staff or helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE %}'{{ ticket.get_absolute_url }}'
+            {% else %} '{% url 'helpdesk_public_view' %}?ticket={{ticket.ticket_for_url}}&email={{ user.email }}' {%endif%}>
+    {{ ticket.ticket }}
+</a></th>
 <td>{{ ticket.priority }}</td>
-<th><a href='{{ ticket.get_absolute_url }}'>{{ ticket.title }}</a></th>
+<th><a href={% if user.is_staff or helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE %}'{{ ticket.get_absolute_url }}'
+            {% else %} '{% url 'helpdesk_public_view' %}?ticket={{ticket.ticket_for_url}}&email={{ user.email }}' {%endif%}>
+    {{ ticket.title }}
+</a></th>
 <td>{{ ticket.queue }}</td>
 <td>{{ ticket.milestone }}</td>
 <td>{{ ticket.get_ticket_type_display }}</td>

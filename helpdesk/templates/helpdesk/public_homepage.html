@@ -3,7 +3,7 @@
 
 {% block helpdesk_body %}
 
-{% if kb_categories %}
+{% if helpdesk_settings.HELPDESK_KB_ENABLED and kb_categories %}
 <h2>{% trans "Knowledgebase Articles" %}</h2>
 
 <table class="table table-hover table-bordered table-striped">
@@ -21,7 +21,7 @@
 {% endif %}
 
 {% if helpdesk_settings.HELPDESK_SUBMIT_A_TICKET_PUBLIC %}
-<div class="col-xs-6">
+<div class="col-xs-4">
 <div class="panel panel-default">
 
 <div class="panel-body">
@@ -67,11 +67,11 @@
 {% endif %}
 
 {% if helpdesk_settings.HELPDESK_VIEW_A_TICKET_PUBLIC %}
-<div class="col-xs-6">
+<div class="col-xs-8">
 <div class="panel panel-default">
 <div class="panel-body">
+{% comment %}
 <h2>{% trans "View a Ticket" %}</h2>
-
 <form method='get' action="{% url 'helpdesk_public_view' %}">
 <fieldset>
     <div class="form-group {% if field.errors %}has-error{% endif %}">
@@ -80,13 +80,22 @@
     </div>
     <div class="form-group {% if field.errors %}has-error{% endif %}">
         <label for='id_email'>{% trans "Your E-mail Address" %}</label>
-        <div class="input-group"><input type='text' name='email' /></div>
+        <div class="input-group"><input type='text' name='email' value="{{ user.email }}"/></div>
     </div>
     <div class='buttons form-group'>
     <input type='submit' class="btn btn-primary"  value='{% trans "View Ticket" %}' />
     </div>
 </fieldset>
 {% csrf_token %}</form>
+{% endcomment %}
+
+{% if all_tickets_reported_by_current_user %}
+<h2>{% trans "View a Ticket" %}</h2>
+{% trans "All Tickets submitted by you" as ticket_list_caption %}
+{% include 'helpdesk/include/tickets.html' with ticket_list=all_tickets_reported_by_current_user ticket_list_empty_message="" %}
+{% endif %}
+
+
 </div></div></div>
 {% endif %}
 

@@ -63,10 +63,19 @@ def homepage(request):
 
     knowledgebase_categories = KBCategory.objects.all()
 
+    # all tickets, reported by current user
+    all_tickets_reported_by_current_user = ''
+    email_current_user = request.user.email
+    if email_current_user:
+        all_tickets_reported_by_current_user = Ticket.objects.select_related('queue').filter(
+            submitter_email=email_current_user,
+        ).order_by('status', '-modified')
+
     return render_to_response('helpdesk/public_homepage.html',
         RequestContext(request, {
             'form': form,
             'helpdesk_settings': helpdesk_settings,
+            'all_tickets_reported_by_current_user': all_tickets_reported_by_current_user,
             'kb_categories': knowledgebase_categories
         }))
 
