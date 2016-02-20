@@ -83,6 +83,9 @@ $(document).ready(function() {
         <option value='created'{% ifequal query_params.sorting "created"%} selected='selected'{% endifequal %}>
             {% trans "Created" %}
         </option>
+        <option value='modified'{% ifequal query_params.sorting "modified"%} selected='selected'{% endifequal %}>
+            {% trans "Updated" %}
+        </option>
         <option value='title'{% ifequal query_params.sorting "title"%} selected='selected'{% endifequal %}>
             {% trans "Title" %}
         </option>
@@ -243,7 +246,7 @@ $(document).ready(function() {
 <caption>{% trans "Tickets" %}</caption>
 <thead>
 <tr><th>#</th><th>&nbsp;</th><th>{% trans "Pr" %}</th><th>{% trans "Title" %}</th><th>{% trans "Queue" %}</th><th>{% trans "Milestone" %}</th>
-    <th>{% trans "Type" %}</th><th>{% trans "Status" %}</th><th>{% trans "Created" %}</th><th>{% trans "Owner" %}</th></tr>
+    <th>{% trans "Type" %}</th><th>{% trans "Status" %}</th><th>{% trans "Created" %}</th><th>{% trans "Updated" %}</th><th>{% trans "Owner" %}</th></tr>
 </thead>
 <tbody>
 {% for ticket in tickets.object_list %}
@@ -257,6 +260,7 @@ $(document).ready(function() {
 <td>{{ ticket.get_ticket_type_display }}</td>
 <td>{{ ticket.get_status }}</td>
 <td><span title='{{ ticket.created|date:"r" }}'>{{ ticket.created|naturaltime }}</span></td>
+<td><span title='{{ ticket.modified|date:"r" }}'>{{ ticket.modified|naturaltime }}</span></td>
 <td>{{ ticket.get_assigned_to }}</td>
 </tr>
 {% empty %}

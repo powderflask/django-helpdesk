@@ -886,7 +886,7 @@ def ticket_list(request):
 
         ### SORTING
         sort = request.GET.get('sort', None)
-        if sort not in ('ticket_type', 'status', 'assigned_to', 'created', 'title', 'queue', 'milestone', 'priority'):
+        if sort not in ('ticket_type', 'status', 'assigned_to', 'created', 'modified', 'title', 'queue', 'milestone', 'priority'):
             sort = 'created'
         query_params['sorting'] = sort
 
