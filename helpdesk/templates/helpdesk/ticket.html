@@ -142,13 +142,15 @@ function googleTranslateElementInit() {
         <dd><input type='radio' name='new_status' value='1' id='st_open' checked='checked'><label for='st_open' class='active'>{% trans "Open" %}</label> &raquo;
         <input type='radio' name='new_status' value='3' id='st_resolved'{% if not ticket.can_be_resolved %} disabled='disabled'{% endif %}><label for='st_resolved'>{% trans "Resolved" %}</label> &raquo;
         <input type='radio' name='new_status' value='4' id='st_closed'{% if not ticket.can_be_resolved %} disabled='disabled'{% endif %}><label for='st_closed'>{% trans "Closed" %}</label> &raquo;
-        <input type='radio' name='new_status' value='5' id='st_duplicate'><label for='st_duplicate'>{% trans "Duplicate" %}</label></dd>
+        <input type='radio' name='new_status' value='5' id='st_duplicate'><label for='st_duplicate'>{% trans "Duplicate" %}</label> &raquo;
+        <input type='radio' name='new_status' value='6' id='st_wontfix'><label for='st_wontfix'>{% trans "Won't Fix" %}</label></dd>
         {% endifequal %}
         {% ifequal ticket.status 2 %}
         <dd><input type='radio' name='new_status' value='2' id='st_reopened' checked='checked'><label for='st_reopened' class='active'>{% trans "Reopened" %}</label> &raquo;
         <input type='radio' name='new_status' value='3' id='st_resolved'{% if not ticket.can_be_resolved %} disabled='disabled'{% endif %}><label for='st_resolved'>{% trans "Resolved" %}</label> &raquo;
         <input type='radio' name='new_status' value='4' id='st_closed'{% if not ticket.can_be_resolved %} disabled='disabled'{% endif %}><label for='st_closed'>{% trans "Closed" %}</label> &raquo;
-        <input type='radio' name='new_status' value='5' id='st_duplicate'><label for='st_duplicate'>{% trans "Duplicate" %}</label></dd>
+        <input type='radio' name='new_status' value='5' id='st_duplicate'><label for='st_duplicate'>{% trans "Duplicate" %}</label> &raquo;
+        <input type='radio' name='new_status' value='6' id='st_wontfix'><label for='st_wontfix'>{% trans "Won't Fix" %}</label></dd>
         {% endifequal %}
         {% ifequal ticket.status 3 %}
         <dd><input type='radio' name='new_status' value='2' id='st_reopened'><label for='st_reopened'>{% trans "Reopened" %}</label> &laquo;
@@ -162,6 +164,10 @@ function googleTranslateElementInit() {
         {% ifequal ticket.status 5 %}
         <dd><input type='radio' name='new_status' value='2' id='st_reopened'><label for='st_reopened'>{% trans "Reopened" %}</label> &laquo;
         <input type='radio' name='new_status' value='5' id='st_duplicate' checked='checked'><label for='st_duplicate'>{% trans "Duplicate" %}</label></dd>
+        {% endifequal %}
+        {% ifequal ticket.status 6 %}
+        <dd><input type='radio' name='new_status' value='2' id='st_reopened'><label for='st_reopened'>{% trans "Reopened" %}</label> &laquo;
+        <input type='radio' name='new_status' value='6' id='st_wontfix' checked='checked'><label for='st_wontfix'>{% trans "Won't Fix" %}</label></dd>
         {% endifequal %}
 
         {% if helpdesk_settings.HELPDESK_UPDATE_PUBLIC_DEFAULT %}
@@ -190,6 +196,9 @@ function googleTranslateElementInit() {
 
         <dt><label for='id_priority'>{% trans "Priority" %}</label></dt>
         <dd><select id='id_priority' name='priority'>{% for p in priorities %}<option value='{{ p.0 }}'{% ifequal p.0 ticket.priority %} selected='selected'{% endifequal %}>{{ p.1 }}</option>{% endfor %}</select></dd>
+
+        <dt><label for='id_milestone'>{% trans "Milestone" %}</label></dt>
+        <dd><select id='id_milestone' name='milestone'>{% for m in milestones %}<option value='{{ m.0 }}'{% ifequal m.0 ticket.milestone_id %} selected='selected'{% endifequal %}>{{ m.1 }}</option>{% endfor %}</select></dd>
 
         <dt><label for='id_due_date'>{% trans "Due on" %}</label></dt>
         <dd>{{ form.due_date }}</dd>

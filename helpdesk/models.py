@@ -301,6 +301,42 @@ class Queue(models.Model):
                 pass
 
 
+@python_2_unicode_compatible
+class Milestone(models.Model):
+    """
+    A milestone is a collection of tickets into a logical group, often a specific release of a product.
+
+    For example, a company may have a Milestone for release 1.6 and 2.0 of their current project.
+
+    """
+
+    title = models.CharField(
+        _('Title'),
+        max_length=100,
+        )
+
+    slug = models.SlugField(
+        _('Slug'),
+        max_length=50,
+        unique=True,
+        help_text=_('This slug is used when building ticket ID\'s. Once set, '
+            'try not to change it.'),
+        )
+
+    is_active = models.BooleanField(
+        _('Active?'),
+        default = True,
+        help_text=_('In-active milestones will not be visible via the ticketing system.')
+    )
+    def __str__(self):
+        return "%s" % self.title
+
+    class Meta:
+        ordering = ('id',)
+        verbose_name = _('Milestone')
+        verbose_name_plural = _('Milestones')
+
+
 class Ticket(models.Model):
     """
     To allow a ticket to be entered as quickly as possible, only the
@@ -364,6 +400,14 @@ class Ticket(models.Model):
     queue = models.ForeignKey(
         Queue,
         verbose_name=_('Queue'),
+        )
+
+    milestone = models.ForeignKey(
+        Milestone,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        verbose_name=_('Milestone'),
         )
 
     ticket_type = models.IntegerField(
@@ -1370,7 +1414,10 @@ class CustomField(models.Model):
         )
 
     def _choices_as_array(self):
-        from StringIO import StringIO
+        try:
+            from StringIO import StringIO
+        except ImportError:
+            from io import StringIO
         valuebuffer = StringIO(self.list_values)
         choices = [[item.strip(), item.strip()] for item in valuebuffer.readlines()]
         valuebuffer.close()

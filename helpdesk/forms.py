@@ -27,7 +27,7 @@ except ImportError:
     from datetime import datetime as timezone
 
 from helpdesk.lib import send_templated_mail, safe_template_context
-from helpdesk.models import Ticket, Queue, FollowUp, Attachment, IgnoreEmail, TicketCC, CustomField, TicketCustomFieldValue, TicketDependency
+from helpdesk.models import Ticket, Queue, Milestone, FollowUp, Attachment, IgnoreEmail, TicketCC, CustomField, TicketCustomFieldValue, TicketDependency
 from helpdesk import settings as helpdesk_settings
 
 class CustomFieldMixin(object):
@@ -132,6 +132,12 @@ class TicketForm(CustomFieldMixin, forms.Form):
         choices=()
         )
 
+    milestone = forms.ChoiceField(
+        label=_('Milestone'),
+        required=False,
+        choices=()
+        )
+
     title = forms.CharField(
         max_length=100,
         required=True,
@@ -216,6 +222,10 @@ class TicketForm(CustomFieldMixin, forms.Form):
         """
 
         q = Queue.objects.get(id=int(self.cleaned_data['queue']))
+        try:
+            m = Milestone.objects.get(id=int(self.cleaned_data['milestone']))
+        except Milestone.DoesNotExist:
+            m = None
 
         t = Ticket( title = self.cleaned_data['title'],
                     submitter_email = self.cleaned_data['submitter_email'],
@@ -223,6 +233,7 @@ class TicketForm(CustomFieldMixin, forms.Form):
                     status = Ticket.OPEN_STATUS,
                     ticket_type = self.cleaned_data['ticket_type'],
                     queue = q,
+                    milestone = m,
                     description = self.cleaned_data['body'],
                     priority = self.cleaned_data['priority'],
                     due_date = self.cleaned_data['due_date'],

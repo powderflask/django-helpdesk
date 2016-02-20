@@ -40,7 +40,7 @@ except ImportError:
 
 from helpdesk.forms import TicketForm, UserSettingsForm, EmailIgnoreForm, EditTicketForm, TicketCCForm, EditFollowUpForm, TicketDependencyForm
 from helpdesk.lib import send_templated_mail, query_to_dict, apply_query, safe_template_context
-from helpdesk.models import Ticket, Queue, FollowUp, TicketChange, PreSetReply, Attachment, SavedSearch, IgnoreEmail, TicketCC, TicketDependency
+from helpdesk.models import Ticket, Queue, Milestone, FollowUp, TicketChange, PreSetReply, Attachment, SavedSearch, IgnoreEmail, TicketCC, TicketDependency
 from helpdesk import settings as helpdesk_settings
 
 if helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE:
@@ -300,6 +300,7 @@ def view_ticket(request, ticket_id):
             'active_users': users,
             'ticket_types': Ticket.TICKETTYPE_CHOICES,
             'priorities': Ticket.PRIORITY_CHOICES,
+            'milestones': [('', '--------')] + [[m.id, m.title] for m in Milestone.objects.filter(is_active=True)],
             'preset_replies': PreSetReply.objects.filter(Q(queues=ticket.queue) | Q(queues__isnull=True)),
             'ticketcc_string': ticketcc_string,
             'SHOW_SUBSCRIBE': SHOW_SUBSCRIBE,
@@ -361,6 +362,9 @@ def update_ticket(request, ticket_id, public=False):
     title = request.POST.get('title', '')
     public = request.POST.get('public', False)
     owner = int(request.POST.get('owner', -1))
+    ticket_type = int(request.POST.get('ticket_type', ticket.ticket_type))
+    milestone = request.POST.get('milestone', ticket.milestone)
+    if milestone:  milestone = int(milestone)
     priority = int(request.POST.get('priority', ticket.priority))
     due_date_year = int(request.POST.get('due_date_year', 0))
     due_date_month = int(request.POST.get('due_date_month', 0))
@@ -381,6 +385,8 @@ def update_ticket(request, ticket_id, public=False):
         new_status == ticket.status,
         title == ticket.title,
         priority == int(ticket.priority),
+        ticket_type == int(ticket.ticket_type),
+        milestone == ticket.milestone_id,
         due_date == ticket.due_date,
         (owner == -1) or (not owner and not ticket.assigned_to) or (owner and User.objects.get(id=owner) == ticket.assigned_to),
     ])
@@ -490,6 +496,26 @@ def update_ticket(request, ticket_id, public=False):
             )
         c.save()
         ticket.priority = priority
+
+    if ticket_type != ticket.ticket_type:
+        c = TicketChange(
+            followup=f,
+            field=_('Type'),
+            old_value=ticket.ticket_type,
+            new_value=ticket_type,
+            )
+        c.save()
+        ticket.ticket_type = ticket_type
+
+    if milestone != ticket.milestone_id:
+        c = TicketChange(
+            followup=f,
+            field=_('Milestone'),
+            old_value=ticket.milestone_id,
+            new_value=milestone,
+            )
+        c.save()
+        ticket.milestone_id = milestone
 
     if due_date != ticket.due_date:
         c = TicketChange(
@@ -778,6 +804,7 @@ def ticket_list(request):
         from helpdesk.lib import b64decode
         query_params = pickle.loads(b64decode(str(saved_query.query)))
     elif not (  'queue' in request.GET
+            or  'milestone' in request.GET
             or  'assigned_to' in request.GET
             or  'ticket_type' in request.GET
             or  'status' in request.GET
@@ -800,6 +827,14 @@ def ticket_list(request):
             try:
                 queues = [int(q) for q in queues]
                 query_params['filtering']['queue__id__in'] = queues
+            except ValueError:
+                pass
+
+        milestones = request.GET.getlist('milestone')
+        if milestones:
+            try:
+                milestones = [int(m) for m in milestones]
+                query_params['filtering']['milestone__id__in'] = milestones
             except ValueError:
                 pass
 
@@ -851,7 +886,7 @@ def ticket_list(request):
 
         ### SORTING
         sort = request.GET.get('sort', None)
-        if sort not in ('ticket_type', 'status', 'assigned_to', 'created', 'title', 'queue', 'priority'):
+        if sort not in ('ticket_type', 'status', 'assigned_to', 'created', 'title', 'queue', 'milestone', 'priority'):
             sort = 'created'
         query_params['sorting'] = sort
 
@@ -898,6 +933,7 @@ def ticket_list(request):
     querydict = request.GET.copy()
     querydict.pop('page', 1)
 
+    milestone_choices = [(m.id, m.title) for m in Milestone.objects.filter(is_active=True)]
 
     return render_to_response('helpdesk/ticket_list.html',
         RequestContext(request, dict(
@@ -906,6 +942,7 @@ def ticket_list(request):
             tickets=tickets,
             user_choices=User.objects.filter(is_active=True,is_staff=True),
             queue_choices=user_queues,
+            milestone_choices=milestone_choices,
             ticket_type_choices=Ticket.TICKETTYPE_CHOICES,
             status_choices=Ticket.STATUS_CHOICES,
             urlsafe_query=urlsafe_query,
@@ -946,6 +983,7 @@ def create_ticket(request):
     if request.method == 'POST':
         form = TicketForm(request.POST, request.FILES)
         form.fields['queue'].choices = [('', '--------')] + [[q.id, q.title] for q in Queue.objects.all()]
+        form.fields['milestone'].choices = [('', '--------')] + [[m.id, m.title] for m in Milestone.objects.filter(is_active=True)]
         form.fields['assigned_to'].choices = [('', '--------')] + [[u.id, u.get_username()] for u in assignable_users]
         if form.is_valid():
             ticket = form.save(user=request.user)
@@ -962,6 +1000,7 @@ def create_ticket(request):
 
         form = TicketForm(initial=initial_data)
         form.fields['queue'].choices = [('', '--------')] + [[q.id, q.title] for q in Queue.objects.all()]
+        form.fields['milestone'].choices = [('', '--------')] + [[m.id, m.title] for m in Milestone.objects.filter(is_active=True)]
         form.fields['assigned_to'].choices = [('', '--------')] + [[u.id, u.get_username()] for u in assignable_users]
         if helpdesk_settings.HELPDESK_CREATE_TICKET_HIDE_ASSIGNED_TO:
             form.fields['assigned_to'].widget = forms.HiddenInput()

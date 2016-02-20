@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
-from helpdesk.models import Queue, Ticket, FollowUp, PreSetReply, KBCategory
+from helpdesk.models import Queue, Milestone, Ticket, FollowUp, PreSetReply, KBCategory
 from helpdesk.models import EscalationExclusion, EmailTemplate, KBItem
 from helpdesk.models import TicketChange, Attachment, IgnoreEmail
 from helpdesk.models import CustomField
@@ -10,11 +10,16 @@ class QueueAdmin(admin.ModelAdmin):
     list_editable = ('allow_public_submission', )
     prepopulated_fields = {"slug": ("title",)}
 
+class MilestoneAdmin(admin.ModelAdmin):
+    list_display = ('title', 'slug', 'is_active')
+    list_editable = ('is_active', )
+    prepopulated_fields = {"slug": ("title",)}
+
 class TicketAdmin(admin.ModelAdmin):
-    list_display = ('title', 'ticket_type', 'status', 'assigned_to', 'queue', 'hidden_submitter_email',)
-    list_editable = ('ticket_type', 'status')
+    list_display = ('title', 'ticket_type', 'status', 'assigned_to', 'queue', 'milestone', 'hidden_submitter_email',)
+    list_editable = ('ticket_type', 'status', 'milestone')
     date_hierarchy = 'created'
-    list_filter = ('queue', 'assigned_to', 'ticket_type', 'status')
+    list_filter = ('queue', 'milestone', 'assigned_to', 'ticket_type', 'status')
 
     def hidden_submitter_email(self, ticket):
         if ticket.submitter_email:
@@ -49,6 +54,7 @@ class EmailTemplateAdmin(admin.ModelAdmin):
 
 admin.site.register(Ticket, TicketAdmin)
 admin.site.register(Queue, QueueAdmin)
+admin.site.register(Milestone, MilestoneAdmin)
 admin.site.register(FollowUp, FollowUpAdmin)
 admin.site.register(PreSetReply)
 admin.site.register(EscalationExclusion)
