@@ -115,7 +115,7 @@ def dashboard(request):
     if email_current_user:
         all_tickets_reported_by_current_user = Ticket.objects.select_related('queue').filter(
             submitter_email=email_current_user,
-        ).order_by('status')
+        ).order_by('status', '-modified')
 
     Tickets = Ticket.objects.filter(
                 queue__in=user_queues,
@@ -363,7 +363,7 @@ def update_ticket(request, ticket_id, public=False):
     public = request.POST.get('public', False)
     owner = int(request.POST.get('owner', -1))
     ticket_type = int(request.POST.get('ticket_type', ticket.ticket_type))
-    milestone = request.POST.get('milestone', ticket.milestone)
+    milestone = request.POST.get('milestone', ticket.milestone_id)
     if milestone:  milestone = int(milestone)
     priority = int(request.POST.get('priority', ticket.priority))
     due_date_year = int(request.POST.get('due_date_year', 0))
