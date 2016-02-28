@@ -9,6 +9,7 @@ scripts/get_email.py - Designed to be run from cron, this script checks the
                        helpdesk, creating tickets from the new messages (or
                        adding to existing tickets if needed)
 """
+from __future__ import unicode_literals
 
 import email
 import imaplib
@@ -19,7 +20,7 @@ import socket
 
 from datetime import timedelta
 from email.header import decode_header
-from email.Utils import parseaddr, collapse_rfc2231_value
+from email.utils import parseaddr, collapse_rfc2231_value
 from optparse import make_option
 
 from email_reply_parser import EmailReplyParser
@@ -83,7 +84,7 @@ def process_email(quiet=False):
 
 def process_queue(q, quiet=False):
     if not quiet:
-        print "Processing: %s" % q
+        print ("Processing: %s" % q)
 
     if q.socks_proxy_type and q.socks_proxy_host and q.socks_proxy_port:
         try:
@@ -162,11 +163,11 @@ def decodeUnknown(charset, string):
             return string.decode('utf-8','ignore')
         except:
             return string.decode('iso8859-1','ignore')
-    return unicode(string, charset)
+    return str(string, charset)
 
 def decode_mail_headers(string):
     decoded = decode_header(string)
-    return u' '.join([unicode(msg, charset or 'utf-8') for msg, charset in decoded])
+    return u' '.join([str(msg, charset or 'utf-8') for msg, charset in decoded])
 
 def ticket_from_message(message, queue, quiet):
     # 'message' must be an RFC822 formatted message.
@@ -305,7 +306,7 @@ def ticket_from_message(message, queue, quiet):
             a.file.save(filename, ContentFile(file['content']), save=False)
             a.save()
             if not quiet:
-                print "    - %s" % filename
+                print ("    - %s" % filename)
 
 
     context = safe_template_context(t)
