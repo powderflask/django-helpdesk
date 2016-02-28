@@ -87,18 +87,20 @@ def dashboard(request):
     showing ticket counts by queue/status, and a list of unassigned tickets
     with options for them to 'Take' ownership of said tickets.
     """
-
+    CLOSED_STATUSES = [Ticket.CLOSED_STATUS, Ticket.WONT_FIX_STATUS, Ticket.DUPLICATE_STATUS]
+    RESOLVED_STATUSES = CLOSED_STATUSES + [Ticket.RESOLVED_STATUS]
     # open & reopened tickets, assigned to current user
     tickets = Ticket.objects.select_related('queue').filter(
             assigned_to=request.user,
         ).exclude(
-            status__in = [Ticket.CLOSED_STATUS, Ticket.RESOLVED_STATUS],
+            status__in = RESOLVED_STATUSES,
         )
 
     # closed & resolved tickets, assigned to current user
     tickets_closed_resolved =  Ticket.objects.select_related('queue').filter(
             assigned_to=request.user,
-            status__in = [Ticket.CLOSED_STATUS, Ticket.RESOLVED_STATUS])
+            status__in = RESOLVED_STATUSES,
+        )
 
     user_queues = _get_user_queues(request.user)
 
@@ -106,7 +108,7 @@ def dashboard(request):
             assigned_to__isnull=True,
             queue__in=user_queues
         ).exclude(
-            status=Ticket.CLOSED_STATUS,
+            status__in = CLOSED_STATUSES,
         )
 
     # all tickets, reported by current user
