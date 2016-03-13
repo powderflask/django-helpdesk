@@ -463,7 +463,7 @@ def update_ticket(request, ticket_id, public=False):
     if request.FILES:
         import mimetypes, os
         for file in request.FILES.getlist('attachment'):
-            filename = file.name.encode('ascii', 'ignore')
+            filename = file.name.encode('ascii', 'ignore').decode()  # JFALL added decode() to avoid type error deep in urllib
             a = Attachment(
                 followup=f,
                 filename=filename,
