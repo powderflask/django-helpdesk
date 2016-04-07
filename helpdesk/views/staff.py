@@ -40,7 +40,8 @@ except ImportError:
 
 from helpdesk.forms import TicketForm, UserSettingsForm, EmailIgnoreForm, EditTicketForm, TicketCCForm, EditFollowUpForm, TicketDependencyForm
 from helpdesk.lib import send_templated_mail, query_to_dict, apply_query, safe_template_context
-from helpdesk.models import Ticket, Queue, Milestone, FollowUp, TicketChange, PreSetReply, Attachment, SavedSearch, IgnoreEmail, TicketCC, TicketDependency
+from helpdesk.models import Ticket, Queue, Milestone, FollowUp, TicketChange, PreSetReply, Attachment, \
+                            SavedSearch, IgnoreEmail, TicketCC, TicketDependency, validate_file_extension
 from helpdesk import settings as helpdesk_settings
 
 if helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE:
@@ -359,6 +360,7 @@ def update_ticket(request, ticket_id, public=False):
 
     ticket = get_object_or_404(Ticket, id=ticket_id)
 
+    # TODO :  This is really bad.  Mitigated by staff-only view, but by-passing validation?  Why?
     comment = request.POST.get('comment', '')
     new_status = int(request.POST.get('new_status', ticket.status))
     title = request.POST.get('title', '')
@@ -463,6 +465,11 @@ def update_ticket(request, ticket_id, public=False):
     if request.FILES:
         import mimetypes, os
         for file in request.FILES.getlist('attachment'):
+            # TODO: This should use form validation -- until then, at least block any non-whitelisted filetypes
+            print('Validating File %s'%file.name)
+            validate_file_extension(file)
+            # may raise ValidationError -- currently crashes helpdesk, but better than accepting bad uploads.
+
             filename = file.name.encode('ascii', 'ignore').decode()  # JFALL added decode() to avoid type error deep in urllib
             a = Attachment(
                 followup=f,

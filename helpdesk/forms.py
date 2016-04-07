@@ -27,7 +27,11 @@ except ImportError:
     from datetime import datetime as timezone
 
 from helpdesk.lib import send_templated_mail, safe_template_context
-from helpdesk.models import Ticket, Queue, Milestone, FollowUp, Attachment, IgnoreEmail, TicketCC, CustomField, TicketCustomFieldValue, TicketDependency
+from helpdesk.models import Ticket, Queue, Milestone, FollowUp, Attachment, \
+                            IgnoreEmail, TicketCC, CustomField, \
+                            TicketCustomFieldValue, TicketDependency, \
+                            validate_file_extension
+
 from helpdesk import settings as helpdesk_settings
 
 class CustomFieldMixin(object):
@@ -199,6 +203,7 @@ class TicketForm(CustomFieldMixin, forms.Form):
         required=False,
         label=_('Attach File'),
         help_text=_('You can attach a file such as a document or screenshot to this ticket.'),
+        validators=[validate_file_extension,],
         )
 
     def __init__(self, *args, **kwargs):
@@ -396,6 +401,7 @@ class PublicTicketForm(CustomFieldMixin, forms.Form):
         label=_('Attach File'),
         help_text=_('You can attach a file such as a document or screenshot to this ticket.'),
         max_length=1000,
+        validators=[validate_file_extension,],
         )
 
     def __init__(self, *args, **kwargs):

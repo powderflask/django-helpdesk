@@ -17,7 +17,7 @@ from django.conf import settings
 from django.utils.translation import ugettext_lazy as _, ugettext
 from django import VERSION
 from django.utils.encoding import python_2_unicode_compatible
-from django.forms import ValidationError
+from django.core.exceptions import ValidationError
 
 from helpdesk import settings as helpdesk_settings
 
