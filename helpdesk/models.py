@@ -17,6 +17,7 @@ from django.conf import settings
 from django.utils.translation import ugettext_lazy as _, ugettext
 from django import VERSION
 from django.utils.encoding import python_2_unicode_compatible
+from django.forms import ValidationError
 
 from helpdesk import settings as helpdesk_settings
 
@@ -771,6 +772,19 @@ def attachment_path(instance, filename):
             os.makedirs(att_path, 0o777)
     return os.path.join(path, filename)
 
+import os
+
+def validate_file_extension(data, whitelist=None):
+    # look for default whitelist in settings if one is not provided.
+    if not whitelist:
+        whitelist = settings.FILE_UPLOAD_WHITELIST
+
+    filename = data.name
+    ext = os.path.splitext(filename)[1]
+    ext = ext.lower()
+    if ext not in whitelist:
+        raise ValidationError("Filetype %s is not allowed!"%(ext))
+
 
 @python_2_unicode_compatible
 class Attachment(models.Model):
@@ -788,6 +802,7 @@ class Attachment(models.Model):
         _('File'),
         upload_to=attachment_path,
         max_length=1000,
+        validators=[validate_file_extension,],
         )
 
     filename = models.CharField(
