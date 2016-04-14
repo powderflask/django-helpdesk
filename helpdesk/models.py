@@ -598,7 +598,7 @@ class Ticket(models.Model):
 
     class Meta:
         get_latest_by = "created"
-        ordering = ('milestone_id', 'priority', '-created')
+        ordering = ('queue_id', 'milestone_id', 'priority', '-created')
         verbose_name = _('Ticket')
         verbose_name_plural = _('Tickets')
 
