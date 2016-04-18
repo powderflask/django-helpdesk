@@ -390,6 +390,7 @@ class PublicTicketForm(CustomFieldMixin, forms.Form):
         help_text=_('Please select a priority carefully.'),
         )
 
+    # J FALL -- removed due_date from public form
     #due_date = forms.DateTimeField(
     #    widget=extras.SelectDateWidget,
     #    required=False,
@@ -434,7 +435,7 @@ class PublicTicketForm(CustomFieldMixin, forms.Form):
             queue = q,
             description = self.cleaned_data['body'],
             priority = self.cleaned_data['priority'],
-            due_date = self.cleaned_data['due_date'],
+            # due_date = self.cleaned_data['due_date'],
             )
 
         t.save()
