@@ -302,7 +302,7 @@ class TicketForm(CustomFieldMixin, forms.Form):
         
         messages_sent_to = []
 
-        if t.submitter_email:
+        if t.submitter_email and not user.is_staff:  # JFALL -- don't send confirmation e-mail to staff
             send_templated_mail(
                 'newticket_submitter',
                 context,
