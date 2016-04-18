@@ -178,7 +178,7 @@ function googleTranslateElementInit() {
           {% if helpdesk_settings.HELPDESK_UPDATE_PUBLIC_DEFAULT_VALUE %}  {# JFALL  Added extra setting #}
             <input type='checkbox' name='public' value='1' checked='checked' />
           {% else %}
-            <input type='checkbox' name='public' value='0' checked='' />
+            <input type='checkbox' name='public' value='0' />
           {% endif %}
         </dd>
         <dd class='form_help_text'>{% trans "If this is public, the submitter will be e-mailed your comment or resolution." %}</dd>
