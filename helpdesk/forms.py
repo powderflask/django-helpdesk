@@ -229,7 +229,7 @@ class TicketForm(CustomFieldMixin, forms.Form):
         q = Queue.objects.get(id=int(self.cleaned_data['queue']))
         try:
             m = Milestone.objects.get(id=int(self.cleaned_data['milestone']))
-        except Milestone.DoesNotExist:
+        except (Milestone.DoesNotExist, ValueError):
             m = None
 
         t = Ticket( title = self.cleaned_data['title'],
