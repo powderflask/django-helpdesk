@@ -12,7 +12,6 @@ from datetime import datetime
 
 from django.http import HttpResponseRedirect
 from django.shortcuts import render_to_response, get_object_or_404
-from django.template import RequestContext
 from django.utils.translation import ugettext as _
 
 from helpdesk import settings as helpdesk_settings
@@ -23,30 +22,30 @@ def index(request):
     category_list = KBCategory.objects.all()
     # TODO: It'd be great to have a list of most popular items here.
     return render_to_response('helpdesk/kb_index.html',
-        RequestContext(request, {
+        {
             'kb_categories': category_list,
             'helpdesk_settings': helpdesk_settings,
-        }))
+        })
 
 
 def category(request, slug):
     category = get_object_or_404(KBCategory, slug__iexact=slug)
     items = category.kbitem_set.all()
     return render_to_response('helpdesk/kb_category.html',
-        RequestContext(request, {
+        {
             'category': category,
             'items': items,
             'helpdesk_settings': helpdesk_settings,
-        }))
+        })
 
 
 def item(request, item):
     item = get_object_or_404(KBItem, pk=item)
     return render_to_response('helpdesk/kb_item.html',
-        RequestContext(request, {
+        {
             'item': item,
             'helpdesk_settings': helpdesk_settings,
-        }))
+        })
 
 
 def vote(request, item):
