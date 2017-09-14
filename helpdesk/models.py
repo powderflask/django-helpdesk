@@ -360,6 +360,7 @@ class Ticket(models.Model):
     NEW_FEATURE_TICKETTYPE = 3
     TASK_TICKETTYPE = 4
     TRAINING_TICKETTYPE = 5
+    COMMENT_TICKETTYPE = 6
 
     TICKETTYPE_CHOICES = (
         (ISSUE_TICKETTYPE, _('Issue / Bug')),
@@ -367,6 +368,7 @@ class Ticket(models.Model):
         (NEW_FEATURE_TICKETTYPE, _('New Feature')),
         (TASK_TICKETTYPE, _('Task / To Do')),
         (TRAINING_TICKETTYPE, _('Training')),
+        (COMMENT_TICKETTYPE, _('Comments / Feedback')),
     )
 
     OPEN_STATUS = 1
