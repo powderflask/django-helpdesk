@@ -20,6 +20,8 @@ from helpdesk.models import KBCategory, KBItem
 
 def index(request):
     category_list = KBCategory.objects.all()
+    if not request.user.is_staff:
+        category_list = category_list.exclude(slug__in=helpdesk_settings.HELPDESK_KB_STAFF_CATEGORIES)
     # TODO: It'd be great to have a list of most popular items here.
     return render(request, 'helpdesk/kb_index.html',
         {

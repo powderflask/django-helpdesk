@@ -31,6 +31,9 @@ HELPDESK_REDIRECT_TO_LOGIN_BY_DEFAULT = getattr(settings, 'HELPDESK_REDIRECT_TO_
 # show knowledgebase links?
 HELPDESK_KB_ENABLED = getattr(settings, 'HELPDESK_KB_ENABLED', True)
 
+# hide some kb categories from public?
+HELPDESK_KB_STAFF_CATEGORIES = getattr(settings, 'HELPDESK_KB_STAFF_CATEGORIES', ())
+
 # show extended navigation by default, to all users, irrespective of staff status?
 HELPDESK_NAVIGATION_ENABLED = getattr(settings, 'HELPDESK_NAVIGATION_ENABLED', False)
 
