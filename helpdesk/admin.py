@@ -5,16 +5,21 @@ from helpdesk.models import EscalationExclusion, EmailTemplate, KBItem
 from helpdesk.models import TicketChange, Attachment, IgnoreEmail
 from helpdesk.models import CustomField
 
+
+@admin.register(Queue)
 class QueueAdmin(admin.ModelAdmin):
     list_display = ('title', 'slug', 'email_address', 'allow_public_submission')
     list_editable = ('allow_public_submission', )
     prepopulated_fields = {"slug": ("title",)}
 
+@admin.register(Milestone)
 class MilestoneAdmin(admin.ModelAdmin):
     list_display = ('title', 'slug', 'is_active')
     list_editable = ('is_active', )
     prepopulated_fields = {"slug": ("title",)}
 
+
+@admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
     list_display = ('title', 'ticket_type', 'status', 'assigned_to', 'queue', 'milestone', 'hidden_submitter_email',)
     list_editable = ('ticket_type', 'status', 'milestone')
@@ -31,35 +36,48 @@ class TicketAdmin(admin.ModelAdmin):
             return ticket.submitter_email
     hidden_submitter_email.short_description = _('Submitter E-Mail')
 
+
 class TicketChangeInline(admin.StackedInline):
     model = TicketChange
+
 
 class AttachmentInline(admin.StackedInline):
     model = Attachment
 
+
+@admin.register(FollowUp)
 class FollowUpAdmin(admin.ModelAdmin):
     inlines = [TicketChangeInline, AttachmentInline]
+    list_display = ('ticket_get_ticket_for_url', 'title', 'date', 'ticket', 'user', 'new_status')
+    list_filter = ('user', 'date', 'new_status')
 
+    def ticket_get_ticket_for_url(self, obj):
+        return obj.ticket.ticket_for_url
+    ticket_get_ticket_for_url.short_description = _('Slug')
+
+
+@admin.register(KBItem)
 class KBItemAdmin(admin.ModelAdmin):
     list_display = ('category', 'title', 'last_updated',)
     list_display_links = ('title',)
 
+
+@admin.register(CustomField)
 class CustomFieldAdmin(admin.ModelAdmin):
     list_display = ('name', 'label', 'data_type')
 
+
+@admin.register(EmailTemplate)
 class EmailTemplateAdmin(admin.ModelAdmin):
     list_display = ('template_name', 'heading', 'locale')
     list_filter = ('locale', )
 
 
-admin.site.register(Ticket, TicketAdmin)
-admin.site.register(Queue, QueueAdmin)
-admin.site.register(Milestone, MilestoneAdmin)
-admin.site.register(FollowUp, FollowUpAdmin)
+@admin.register(IgnoreEmail)
+class IgnoreEmailAdmin(admin.ModelAdmin):
+    list_display = ('name', 'queue_list', 'email_address', 'keep_in_mailbox')
+
+
 admin.site.register(PreSetReply)
 admin.site.register(EscalationExclusion)
-admin.site.register(EmailTemplate, EmailTemplateAdmin)
 admin.site.register(KBCategory)
-admin.site.register(KBItem, KBItemAdmin)
-admin.site.register(IgnoreEmail)
-admin.site.register(CustomField, CustomFieldAdmin)

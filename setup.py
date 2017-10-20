@@ -1,10 +1,12 @@
+from __future__ import print_function
+
 import os
 import sys
 from distutils.util import convert_path
 from fnmatch import fnmatchcase
 from setuptools import setup, find_packages
 
-version = '0.1.17'
+version = '0.3.0'
 
 # Provided as an attribute, so you can append to these instead
 # of replicating them:
@@ -64,8 +66,10 @@ def find_package_data(
                         bad_name = True
                         if show_ignored:
                             print(
-                                "Directory %s ignored by pattern %s"
-                                % (fn, pattern), file=sys.stderr)
+                                "Directory %s ignored by pattern %s" % (fn, pattern),
+                                file=sys.stderr
+                            )
+
                         break
                 if bad_name:
                     continue
@@ -87,8 +91,9 @@ def find_package_data(
                         bad_name = True
                         if show_ignored:
                             print(
-                                "File %s ignored by pattern %s"
-                                % (fn, pattern), file=sys.stderr)
+                                "File %s ignored by pattern %s" % (fn, pattern),
+                                file=sys.stderr
+                                )
                         break
                 if bad_name:
                     continue
@@ -111,7 +116,7 @@ django-helpdesk
 ===============
 
 This is a Django-powered helpdesk ticket tracker, designed to
-plug into an existing Django website and provide you with 
+plug into an existing Django website and provide you with
 internal (or, perhaps, external) helpdesk management.
 """
 
@@ -121,21 +126,32 @@ setup(
     description="Django-powered ticket tracker for your helpdesk",
     long_description=LONG_DESCRIPTION,
     classifiers=[
+        "Development Status :: 4 - Beta",
         "Programming Language :: Python",
-        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
         "Framework :: Django",
+        "Framework :: Django :: 1.11",
         "Environment :: Web Environment",
         "Operating System :: OS Independent",
         "Intended Audience :: Customer Service",
         "License :: OSI Approved :: BSD License",
-        "Natural Language :: English",
-        "Topic :: Office/Business",
         "Topic :: Software Development :: Bug Tracking",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Office/Business",
+        "Natural Language :: English",
     ],
-    keywords=['django', 'helpdesk', 'tickets', 'incidents', 'cases'],
+    keywords=['django', 'helpdesk', 'django-helpdesk', 'tickets', 'incidents',
+              'cases', 'bugs', 'track', 'support'],
     author='Ross Poulton',
     author_email='ross@rossp.org',
-    url='http://github.com/rossp/django-helpdesk',
+    maintainer='Garret Wassermann',
+    maintainer_email='gwasser@gmail.com',
+    url='https://github.com/django-helpdesk/django-helpdesk',
     license='BSD',
     packages=find_packages(),
     package_data=find_package_data("helpdesk", only_in_packages=False),
