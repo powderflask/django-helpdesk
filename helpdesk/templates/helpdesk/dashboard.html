@@ -30,9 +30,4 @@
 {% include 'helpdesk/include/tickets.html' with ticket_list=user_tickets_closed_resolved ticket_list_empty_message="" %}
 {% endif %}
 
-{% if all_tickets_reported_by_current_user %}
-{% trans "All Tickets submitted by you" as ticket_list_caption %}
-{% include 'helpdesk/include/tickets.html' with ticket_list=all_tickets_reported_by_current_user ticket_list_empty_message="" %}
-{% endif %}
-
 {% endblock %}

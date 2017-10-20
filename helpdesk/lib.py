@@ -30,7 +30,7 @@ from django.utils import six
 from django.utils.encoding import smart_text
 from django.utils.safestring import mark_safe
 
-from helpdesk.models import Attachment, EmailTemplate
+from helpdesk.models import Attachment, EmailTemplate, validate_file_extension
 
 logger = logging.getLogger('helpdesk')
 
@@ -140,7 +140,7 @@ def send_templated_mail(template_name,
 
     try:
         return msg.send()
-    except SMTPException:
+    except SMTPException as e:
         logger.exception('SMTPException raised while sending email to {}'.format(recipients))
         if not fail_silently:
             raise e
@@ -313,6 +313,9 @@ def process_attachments(followup, attached_files):
 
     for attached in attached_files:
         if attached.size:
+            validate_file_extension(attached)
+            # TODO: may raise ValidationError -- currently crashes helpdesk, but better than accepting bad uploads.
+
             filename = smart_text(attached.name)
             att = Attachment(
                 followup=followup,
