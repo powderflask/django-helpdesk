@@ -113,7 +113,7 @@ def dashboard(request):
         assigned_to__isnull=True,
         queue__in=user_queues
     ).exclude(
-        status=Ticket.CLOSED_STATUSES,
+        status__in=CLOSED_STATUSES,
     )
 
     # all tickets, reported by current user

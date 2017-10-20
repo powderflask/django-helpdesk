@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('helpdesk', '0011_admin_related_improvements'),
+        ('helpdesk', '0016_auto_20160504_0012'),   # HACK ALERT: alter migration dependency tree to include custom "auto" migrations
     ]
 
     operations = [
