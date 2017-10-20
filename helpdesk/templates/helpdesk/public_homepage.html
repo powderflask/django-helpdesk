@@ -40,7 +40,7 @@
 
 
             <div class="form-group {% if field.errors %}has-error{% endif %}">
-                <label class="control-label" for='id_{{ field.name }}'>{{ field.label }}</label>{% if not field.field.required %} <span class='form_optional'>{% trans "(Optional)" %}</span>{% endif %}</dt>
+                <label class="control-label" for='id_{{ field.name }}'>{{ field.label }}</label>{% if not field.field.required %} <span class='form_optional'>{% trans "(Optional)" %}</span>{% endif %}
                 <div class="input-group">{{ field }}</div>
                 {% if field.errors %}<div class="help-block">{{ field.errors }}</div>{% endif %}
                 {% if field.help_text %}<span class='fhelp-block'>{{ field.help_text }}</span>{% endif %}
@@ -72,7 +72,8 @@
 <div class="panel-body">
 {% comment %}
 <h2>{% trans "View a Ticket" %}</h2>
-<form method='get' action="{% url 'helpdesk_public_view' %}">
+
+<form method='get' action="{% url 'helpdesk:public_view' %}">
 <fieldset>
     <div class="form-group {% if field.errors %}has-error{% endif %}">
         <label for='id_ticket'>{% trans "Ticket" %}</label>

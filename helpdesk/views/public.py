@@ -6,45 +6,49 @@ django-helpdesk - A Django powered ticket tracker for small enterprise.
 views/public.py - All public facing views, eg non-staff (no authentication
                   required) views.
 """
-
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
-from django.http import HttpResponseRedirect, Http404, HttpResponse
-from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.utils.http import urlquote
 from django.utils.translation import ugettext as _
 
 from helpdesk import settings as helpdesk_settings
 from helpdesk.forms import PublicTicketForm
-from helpdesk.lib import send_templated_mail, text_is_spam
+from helpdesk.lib import text_is_spam
 from helpdesk.models import Ticket, Queue, UserSettings, KBCategory
 
 
 def homepage(request):
     if not request.user.is_authenticated() and helpdesk_settings.HELPDESK_REDIRECT_TO_LOGIN_BY_DEFAULT:
-        return HttpResponseRedirect(reverse('login'))
+        return HttpResponseRedirect(reverse('helpdesk:login'))
 
-    if (request.user.is_staff or (request.user.is_authenticated() and helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE)):
+    if request.user.is_staff or \
+            (request.user.is_authenticated() and
+             helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE):
         try:
-            if getattr(request.user.usersettings.settings, 'login_view_ticketlist', False):
-                return HttpResponseRedirect(reverse('helpdesk_list'))
+            if request.user.usersettings_helpdesk.settings.get('login_view_ticketlist', False):
+                return HttpResponseRedirect(reverse('helpdesk:list'))
             else:
-                return HttpResponseRedirect(reverse('helpdesk_dashboard'))
+                return HttpResponseRedirect(reverse('helpdesk:dashboard'))
         except UserSettings.DoesNotExist:
-            return HttpResponseRedirect(reverse('helpdesk_dashboard'))
+            return HttpResponseRedirect(reverse('helpdesk:dashboard'))
 
     if request.method == 'POST':
         form = PublicTicketForm(request.POST, request.FILES)
-        form.fields['queue'].choices = [('', '--------')] + [[q.id, q.title] for q in Queue.objects.filter(allow_public_submission=True)]
+        form.fields['queue'].choices = [('', '--------')] + [
+            (q.id, q.title) for q in Queue.objects.filter(allow_public_submission=True)]
         if form.is_valid():
             if text_is_spam(form.cleaned_data['body'], request):
                 # This submission is spam. Let's not save it.
-                return render(request, 'helpdesk/public_spam.html', {})
+                return render(request, template_name='helpdesk/public_spam.html')
             else:
                 ticket = form.save()
-                return HttpResponseRedirect('%s?ticket=%s&email=%s'% (
-                    reverse('helpdesk_public_view'),
+                return HttpResponseRedirect('%s?ticket=%s&email=%s' % (
+                    reverse('helpdesk:public_view'),
                     ticket.ticket_for_url,
-                    ticket.submitter_email)
-                    )
+                    urlquote(ticket.submitter_email))
+                )
     else:
         try:
             queue = Queue.objects.get(slug=request.GET.get('queue', None))
@@ -58,48 +62,31 @@ def homepage(request):
             initial_data['submitter_email'] = request.user.email
 
         form = PublicTicketForm(initial=initial_data)
-        form.fields['queue'].choices = [('', '--------')] + [[q.id, q.title] for q in Queue.objects.filter(allow_public_submission=True)]
+        form.fields['queue'].choices = [('', '--------')] + [
+            (q.id, q.title) for q in Queue.objects.filter(allow_public_submission=True)]
 
     knowledgebase_categories = KBCategory.objects.all()
 
-    # all tickets, reported by current user
-    all_tickets_reported_by_current_user = ''
-    email_current_user = request.user.email
-    if email_current_user:
-        all_tickets_reported_by_current_user = Ticket.objects.select_related('queue').filter(
-            submitter_email=email_current_user,
-        ).order_by('status', '-modified')
-
-    return render(request, 'helpdesk/public_homepage.html',
-        {
-            'form': form,
-            'helpdesk_settings': helpdesk_settings,
-            'all_tickets_reported_by_current_user': all_tickets_reported_by_current_user,
-            'kb_categories': knowledgebase_categories
-        })
+    return render(request, 'helpdesk/public_homepage.html', {
+        'form': form,
+        'helpdesk_settings': helpdesk_settings,
+        'kb_categories': knowledgebase_categories
+    })
 
 
 def view_ticket(request):
-    ticket_req = request.GET.get('ticket', '')
-    ticket = False
-    email = request.GET.get('email', '')
-    error_message = ''
+    ticket_req = request.GET.get('ticket', None)
+    email = request.GET.get('email', None)
 
     if ticket_req and email:
-        parts = ticket_req.split('-')
-        queue = '-'.join(parts[0:-1])
-        ticket_id = parts[-1]
-
+        queue, ticket_id = Ticket.queue_and_id_from_query(ticket_req)
         try:
-            ticket = Ticket.objects.get(id=ticket_id, queue__slug__iexact=queue, submitter_email__iexact=email)
-        except:
-            ticket = False
+            ticket = Ticket.objects.get(id=ticket_id, submitter_email__iexact=email)
+        except ObjectDoesNotExist:
             error_message = _('Invalid ticket ID or e-mail address. Please try again.')
-
-        if ticket:
-
+        else:
             if request.user.is_staff:
-                redirect_url = reverse('helpdesk_view', args=[ticket_id])
+                redirect_url = reverse('helpdesk:view', args=[ticket_id])
                 if 'close' in request.GET:
                     redirect_url += '?close'
                 return HttpResponseRedirect(redirect_url)
@@ -113,7 +100,7 @@ def view_ticket(request):
                     'public': 1,
                     'title': ticket.title,
                     'comment': _('Submitter accepted resolution and closed ticket'),
-                    }
+                }
                 if ticket.assigned_to:
                     request.POST['owner'] = ticket.assigned_to.id
                 request.GET = {}
@@ -123,27 +110,29 @@ def view_ticket(request):
             # redirect user back to this ticket if possible.
             redirect_url = ''
             if helpdesk_settings.HELPDESK_NAVIGATION_ENABLED:
-                redirect_url = reverse('helpdesk_view', args=[ticket_id])
+                redirect_url = reverse('helpdesk:view', args=[ticket_id])
 
-            return render(request, 'helpdesk/public_view_ticket.html',
-                {
-                    'ticket': ticket,
-                    'helpdesk_settings': helpdesk_settings,
-                    'next': redirect_url,
-                })
+            return render(request, 'helpdesk/public_view_ticket.html', {
+                'ticket': ticket,
+                'helpdesk_settings': helpdesk_settings,
+                'next': redirect_url,
+            })
+    elif ticket_req is None and email is None:
+        error_message = None
+    else:
+        error_message = _('Missing ticket ID or e-mail address. Please try again.')
 
-    return render(request, 'helpdesk/public_view_form.html',
-        {
-            'ticket': ticket,
-            'email': email,
-            'error_message': error_message,
-            'helpdesk_settings': helpdesk_settings,
-        })
+    return render(request, 'helpdesk/public_view_form.html', {
+        'ticket': False,
+        'email': email,
+        'error_message': error_message,
+        'helpdesk_settings': helpdesk_settings,
+    })
+
 
 def change_language(request):
     return_to = ''
     if 'return_to' in request.GET:
         return_to = request.GET['return_to']
 
-    return render(request, 'helpdesk/public_change_language.html',
-        {'next': return_to})
+    return render(request, 'helpdesk/public_change_language.html', {'next': return_to})

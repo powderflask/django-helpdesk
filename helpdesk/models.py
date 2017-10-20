@@ -12,19 +12,11 @@ from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _, ugettext
-from django import VERSION
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.exceptions import ValidationError
-
-from helpdesk import settings as helpdesk_settings
-
-try:
-    from django.utils import timezone
-except ImportError:
-    from datetime import datetime as timezone
 
 
 @python_2_unicode_compatible
@@ -41,56 +33,56 @@ class Queue(models.Model):
     title = models.CharField(
         _('Title'),
         max_length=100,
-        )
+    )
 
     slug = models.SlugField(
         _('Slug'),
         max_length=50,
         unique=True,
         help_text=_('This slug is used when building ticket ID\'s. Once set, '
-            'try not to change it or e-mailing may get messy.'),
-        )
+                    'try not to change it or e-mailing may get messy.'),
+    )
 
     email_address = models.EmailField(
         _('E-Mail Address'),
         blank=True,
         null=True,
         help_text=_('All outgoing e-mails for this queue will use this e-mail '
-            'address. If you use IMAP or POP3, this should be the e-mail '
-            'address for that mailbox.'),
-        )
+                    'address. If you use IMAP or POP3, this should be the e-mail '
+                    'address for that mailbox.'),
+    )
 
     locale = models.CharField(
         _('Locale'),
         max_length=10,
         blank=True,
         null=True,
-        help_text=_('Locale of this queue. All correspondence in this queue will be in this language.'),
-        )
+        help_text=_('Locale of this queue. All correspondence in this '
+                    'queue will be in this language.'),
+    )
 
     allow_public_submission = models.BooleanField(
         _('Allow Public Submission?'),
         blank=True,
         default=False,
-        help_text=_('Should this queue be listed on the public submission '
-            'form?'),
-        )
+        help_text=_('Should this queue be listed on the public submission form?'),
+    )
 
     allow_email_submission = models.BooleanField(
         _('Allow E-Mail Submission?'),
         blank=True,
         default=False,
         help_text=_('Do you want to poll the e-mail box below for new '
-            'tickets?'),
-        )
+                    'tickets?'),
+    )
 
     escalate_days = models.IntegerField(
         _('Escalation Days'),
         blank=True,
         null=True,
         help_text=_('For tickets which are not held, how often do you wish to '
-            'increase their priority? Set to 0 for no escalation.'),
-        )
+                    'increase their priority? Set to 0 for no escalation.'),
+    )
 
     new_ticket_cc = models.CharField(
         _('New Ticket CC Address'),
@@ -98,9 +90,9 @@ class Queue(models.Model):
         null=True,
         max_length=200,
         help_text=_('If an e-mail address is entered here, then it will '
-            'receive notification of all new tickets created for this queue. '
-            'Enter a comma between multiple e-mail addresses.'),
-        )
+                    'receive notification of all new tickets created for this queue. '
+                    'Enter a comma between multiple e-mail addresses.'),
+    )
 
     updated_ticket_cc = models.CharField(
         _('Updated Ticket CC Address'),
@@ -108,20 +100,21 @@ class Queue(models.Model):
         null=True,
         max_length=200,
         help_text=_('If an e-mail address is entered here, then it will '
-            'receive notification of all activity (new tickets, closed '
-            'tickets, updates, reassignments, etc) for this queue. Separate '
-            'multiple addresses with a comma.'),
-        )
+                    'receive notification of all activity (new tickets, closed '
+                    'tickets, updates, reassignments, etc) for this queue. Separate '
+                    'multiple addresses with a comma.'),
+    )
 
     email_box_type = models.CharField(
         _('E-Mail Box Type'),
         max_length=5,
-        choices=(('pop3', _('POP 3')), ('imap', _('IMAP'))),
+        choices=(('pop3', _('POP 3')), ('imap', _('IMAP')), ('local', _('Local Directory'))),
         blank=True,
         null=True,
         help_text=_('E-Mail server type for creating tickets automatically '
-            'from a mailbox - both POP3 and IMAP are supported.'),
-        )
+                    'from a mailbox - both POP3 and IMAP are supported, as well as '
+                    'reading from a local directory.'),
+    )
 
     email_box_host = models.CharField(
         _('E-Mail Hostname'),
@@ -129,25 +122,25 @@ class Queue(models.Model):
         blank=True,
         null=True,
         help_text=_('Your e-mail server address - either the domain name or '
-            'IP address. May be "localhost".'),
-        )
+                    'IP address. May be "localhost".'),
+    )
 
     email_box_port = models.IntegerField(
         _('E-Mail Port'),
         blank=True,
         null=True,
         help_text=_('Port number to use for accessing e-mail. Default for '
-            'POP3 is "110", and for IMAP is "143". This may differ on some '
-            'servers. Leave it blank to use the defaults.'),
-        )
+                    'POP3 is "110", and for IMAP is "143". This may differ on some '
+                    'servers. Leave it blank to use the defaults.'),
+    )
 
     email_box_ssl = models.BooleanField(
         _('Use SSL for E-Mail?'),
         blank=True,
         default=False,
         help_text=_('Whether to use SSL for IMAP or POP3 - the default ports '
-            'when using SSL are 993 for IMAP and 995 for POP3.'),
-        )
+                    'when using SSL are 993 for IMAP and 995 for POP3.'),
+    )
 
     email_box_user = models.CharField(
         _('E-Mail Username'),
@@ -155,7 +148,7 @@ class Queue(models.Model):
         blank=True,
         null=True,
         help_text=_('Username for accessing this mailbox.'),
-        )
+    )
 
     email_box_pass = models.CharField(
         _('E-Mail Password'),
@@ -163,7 +156,7 @@ class Queue(models.Model):
         blank=True,
         null=True,
         help_text=_('Password for the above username'),
-        )
+    )
 
     email_box_imap_folder = models.CharField(
         _('IMAP Folder'),
@@ -171,20 +164,29 @@ class Queue(models.Model):
         blank=True,
         null=True,
         help_text=_('If using IMAP, what folder do you wish to fetch messages '
-            'from? This allows you to use one IMAP account for multiple '
-            'queues, by filtering messages on your IMAP server into separate '
-            'folders. Default: INBOX.'),
-        )
+                    'from? This allows you to use one IMAP account for multiple '
+                    'queues, by filtering messages on your IMAP server into separate '
+                    'folders. Default: INBOX.'),
+    )
+
+    email_box_local_dir = models.CharField(
+        _('E-Mail Local Directory'),
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text=_('If using a local directory, what directory path do you '
+                    'wish to poll for new email? '
+                    'Example: /var/lib/mail/helpdesk/'),
+    )
 
     permission_name = models.CharField(
         _('Django auth permission name'),
-        max_length=50,
+        max_length=72,  # based on prepare_permission_name() pre-pending chars to slug
         blank=True,
         null=True,
         editable=False,
         help_text=_('Name used in the django.contrib.auth permission system'),
-        )
-
+    )
 
     email_box_interval = models.IntegerField(
         _('E-Mail Check Interval'),
@@ -192,14 +194,14 @@ class Queue(models.Model):
         blank=True,
         null=True,
         default='5',
-        )
+    )
 
     email_box_last_check = models.DateTimeField(
         blank=True,
         null=True,
         editable=False,
         # This is updated by management/commands/get_mail.py.
-        )
+    )
 
     socks_proxy_type = models.CharField(
         _('Socks Proxy Type'),
@@ -222,6 +224,43 @@ class Queue(models.Model):
         blank=True,
         null=True,
         help_text=_('Socks proxy port number. Default: 9150 (default TOR port)'),
+    )
+
+    logging_type = models.CharField(
+        _('Logging Type'),
+        max_length=5,
+        choices=(
+            ('none', _('None')),
+            ('debug', _('Debug')),
+            ('info', _('Information')),
+            ('warn', _('Warning')),
+            ('error', _('Error')),
+            ('crit', _('Critical'))
+        ),
+        blank=True,
+        null=True,
+        help_text=_('Set the default logging level. All messages at that '
+                    'level or above will be logged to the directory set '
+                    'below. If no level is set, logging will be disabled.'),
+    )
+
+    logging_dir = models.CharField(
+        _('Logging Directory'),
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text=_('If logging is enabled, what directory should we use to '
+                    'store log files for this queue? '
+                    'If no directory is set, default to /var/log/helpdesk/'),
+    )
+
+    default_owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='default_owner',
+        blank=True,
+        null=True,
+        verbose_name=_('Default owner'),
+        on_delete=models.SET_NULL,
     )
 
     def __str__(self):
@@ -283,7 +322,7 @@ class Queue(models.Model):
 
             Permission.objects.create(
                 name=_("Permission for queue: ") + self.title,
-                content_type=ContentType.objects.get(model="queue"),
+                content_type=ContentType.objects.get_for_model(self.__class__),
                 codename=basename,
             )
 
@@ -398,12 +437,12 @@ class Ticket(models.Model):
     title = models.CharField(
         _('Title'),
         max_length=200,
-        )
+    )
 
     queue = models.ForeignKey(
         Queue,
         verbose_name=_('Queue'),
-        )
+    )
 
     milestone = models.ForeignKey(
         Milestone,
@@ -423,21 +462,21 @@ class Ticket(models.Model):
         _('Created'),
         blank=True,
         help_text=_('Date this ticket was first created'),
-        )
+    )
 
     modified = models.DateTimeField(
         _('Modified'),
         blank=True,
         help_text=_('Date this ticket was most recently changed.'),
-        )
+    )
 
     submitter_email = models.EmailField(
         _('Submitter E-Mail'),
         blank=True,
         null=True,
         help_text=_('The submitter will receive an email for all public '
-            'follow-ups left for this task.'),
-        )
+                    'follow-ups left for this task.'),
+    )
 
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -445,35 +484,34 @@ class Ticket(models.Model):
         blank=True,
         null=True,
         verbose_name=_('Assigned to'),
-        )
+    )
 
     status = models.IntegerField(
         _('Status'),
         choices=STATUS_CHOICES,
         default=OPEN_STATUS,
-        )
+    )
 
     on_hold = models.BooleanField(
         _('On Hold'),
         blank=True,
         default=False,
-        help_text=_('If a ticket is on hold, it will not automatically be '
-            'escalated.'),
-        )
+        help_text=_('If a ticket is on hold, it will not automatically be escalated.'),
+    )
 
     description = models.TextField(
         _('Description'),
         blank=True,
         null=True,
         help_text=_('The content of the customers query.'),
-        )
+    )
 
     resolution = models.TextField(
         _('Resolution'),
         blank=True,
         null=True,
         help_text=_('The resolution provided to the customer by our staff.'),
-        )
+    )
 
     priority = models.IntegerField(
         _('Priority'),
@@ -481,21 +519,21 @@ class Ticket(models.Model):
         default=3,
         blank=3,
         help_text=_('1 = Highest Priority, 5 = Low Priority'),
-        )
+    )
 
     due_date = models.DateTimeField(
         _('Due on'),
         blank=True,
         null=True,
-        )
+    )
 
     last_escalation = models.DateTimeField(
         blank=True,
         null=True,
         editable=False,
         help_text=_('The date this ticket was last escalated - updated '
-            'automatically by management/commands/escalate_tickets.py.'),
-        )
+                    'automatically by management/commands/escalate_tickets.py.'),
+    )
 
     def _get_assigned_to(self):
         """ Custom property to allow us to easily print 'Unassigned' if a
@@ -514,19 +552,13 @@ class Ticket(models.Model):
         """ A user-friendly ticket ID, which is a combination of ticket ID
         and queue slug. This is generally used in e-mail subjects. """
 
-        return u"[%s]" % (self.ticket_for_url)
+        return u"[%s]" % self.ticket_for_url
     ticket = property(_get_ticket)
 
     def _get_ticket_for_url(self):
         """ A URL-friendly ticket ID, used in links. """
         return u"%s-%s" % (self.queue.slug, self.id)
     ticket_for_url = property(_get_ticket_for_url)
-
-    def _get_priority_img(self):
-        """ Image-based representation of the priority """
-        from django.conf import settings
-        return u"%shelpdesk/priorities/priority%s.png" % (settings.MEDIA_URL, self.priority)
-    get_priority_img = property(_get_priority_img)
 
     def _get_priority_css_class(self):
         """
@@ -536,6 +568,8 @@ class Ticket(models.Model):
             return "warning"
         elif self.priority == 1:
             return "danger"
+        elif self.priority == 5:
+            return "success"
         else:
             return ""
     get_priority_css_class = property(_get_priority_css_class)
@@ -545,9 +579,11 @@ class Ticket(models.Model):
         Displays the ticket status, with an "On Hold" message if needed.
         """
         held_msg = ''
-        if self.on_hold: held_msg = _(' - On Hold')
+        if self.on_hold:
+            held_msg = _(' - On Hold')
         dep_msg = ''
-        if self.can_be_resolved == False: dep_msg = _(' - Open dependencies')
+        if not self.can_be_resolved:
+            dep_msg = _(' - Open dependencies')
         return u'%s%s%s' % (self.get_status_display(), held_msg, dep_msg)
     get_status = property(_get_status)
 
@@ -564,10 +600,10 @@ class Ticket(models.Model):
             site = Site(domain='configure-django-sites.com')
         return u"http://%s%s?ticket=%s&email=%s" % (
             site.domain,
-            reverse('helpdesk_public_view'),
+            reverse('helpdesk:public_view'),
             self.ticket_for_url,
             self.submitter_email
-            )
+        )
     ticket_url = property(_get_ticket_url)
 
     def _get_staff_url(self):
@@ -583,9 +619,9 @@ class Ticket(models.Model):
             site = Site(domain='configure-django-sites.com')
         return u"http://%s%s" % (
             site.domain,
-            reverse('helpdesk_view',
-            args=[self.id])
-            )
+            reverse('helpdesk:view',
+                    args=[self.id])
+        )
     staff_url = property(_get_staff_url)
 
     def _can_be_resolved(self):
@@ -595,7 +631,8 @@ class Ticket(models.Model):
         False = There are non-resolved dependencies
         """
         OPEN_STATUSES = (Ticket.OPEN_STATUS, Ticket.REOPENED_STATUS)
-        return TicketDependency.objects.filter(ticket=self).filter(depends_on__status__in=OPEN_STATUSES).count() == 0
+        return TicketDependency.objects.filter(ticket=self).filter(
+            depends_on__status__in=OPEN_STATUSES).count() == 0
     can_be_resolved = property(_can_be_resolved)
 
     class Meta:
@@ -608,7 +645,7 @@ class Ticket(models.Model):
         return '%s %s' % (self.id, self.title)
 
     def get_absolute_url(self):
-        return ('helpdesk_view', (self.id,))
+        return 'helpdesk:view', (self.id,)
     get_absolute_url = models.permalink(get_absolute_url)
 
     def save(self, *args, **kwargs):
@@ -623,8 +660,17 @@ class Ticket(models.Model):
 
         super(Ticket, self).save(*args, **kwargs)
 
+    @staticmethod
+    def queue_and_id_from_query(query):
+        # Apply the opposite logic here compared to self._get_ticket_for_url
+        # Ensure that queues with '-' in them will work
+        parts = query.split('-')
+        queue = '-'.join(parts[0:-1])
+        return queue, parts[-1]
+
 
 class FollowUpManager(models.Manager):
+
     def private_followups(self):
         return self.filter(public=False)
 
@@ -649,40 +695,40 @@ class FollowUp(models.Model):
     ticket = models.ForeignKey(
         Ticket,
         verbose_name=_('Ticket'),
-        )
+    )
 
     date = models.DateTimeField(
         _('Date'),
-        default = timezone.now
-        )
+        default=timezone.now
+    )
 
     title = models.CharField(
         _('Title'),
         max_length=200,
         blank=True,
         null=True,
-        )
+    )
 
     comment = models.TextField(
         _('Comment'),
         blank=True,
         null=True,
-        )
+    )
 
     public = models.BooleanField(
         _('Public'),
         blank=True,
         default=False,
         help_text=_('Public tickets are viewable by the submitter and all '
-            'staff, but non-public tickets can only be seen by staff.'),
-        )
+                    'staff, but non-public tickets can only be seen by staff.'),
+    )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         blank=True,
         null=True,
         verbose_name=_('User'),
-        )
+    )
 
     new_status = models.IntegerField(
         _('New Status'),
@@ -690,12 +736,12 @@ class FollowUp(models.Model):
         blank=True,
         null=True,
         help_text=_('If the status was changed, what was it changed to?'),
-        )
+    )
 
     objects = FollowUpManager()
 
     class Meta:
-        ordering = ['date']
+        ordering = ('date',)
         verbose_name = _('Follow-up')
         verbose_name_plural = _('Follow-ups')
 
@@ -722,24 +768,24 @@ class TicketChange(models.Model):
     followup = models.ForeignKey(
         FollowUp,
         verbose_name=_('Follow-up'),
-        )
+    )
 
     field = models.CharField(
         _('Field'),
         max_length=100,
-        )
+    )
 
     old_value = models.TextField(
         _('Old Value'),
         blank=True,
         null=True,
-        )
+    )
 
     new_value = models.TextField(
         _('New Value'),
         blank=True,
         null=True,
-        )
+    )
 
     def __str__(self):
         out = '%s ' % self.field
@@ -751,7 +797,7 @@ class TicketChange(models.Model):
             out += ugettext('changed from "%(old_value)s" to "%(new_value)s"') % {
                 'old_value': self.old_value,
                 'new_value': self.new_value
-                }
+            }
         return out
 
     class Meta:
@@ -765,9 +811,8 @@ def attachment_path(instance, filename):
     putting attachments in a folder off attachments for ticket/followup_id/.
     """
     import os
-    from django.conf import settings
     os.umask(0)
-    path = 'helpdesk/attachments/%s/%s' % (instance.followup.ticket.ticket_for_url, instance.followup.id )
+    path = 'helpdesk/attachments/%s/%s' % (instance.followup.ticket.ticket_for_url, instance.followup.id)
     att_path = os.path.join(settings.MEDIA_ROOT, path)
     if settings.DEFAULT_FILE_STORAGE == "django.core.files.storage.FileSystemStorage":
         if not os.path.exists(att_path):
@@ -798,44 +843,35 @@ class Attachment(models.Model):
     followup = models.ForeignKey(
         FollowUp,
         verbose_name=_('Follow-up'),
-        )
+    )
 
     file = models.FileField(
         _('File'),
         upload_to=attachment_path,
         max_length=1000,
         validators=[validate_file_extension,],
-        )
+    )
 
     filename = models.CharField(
         _('Filename'),
         max_length=1000,
-        )
+    )
 
     mime_type = models.CharField(
         _('MIME Type'),
         max_length=255,
-        )
+    )
 
     size = models.IntegerField(
         _('Size'),
         help_text=_('Size of this file in bytes'),
-        )
-
-    def get_upload_to(self, field_attname):
-        """ Get upload_to path specific to this item """
-        if not self.id:
-            return u''
-        return u'helpdesk/attachments/%s/%s' % (
-            self.followup.ticket.ticket_for_url,
-            self.followup.id
-            )
+    )
 
     def __str__(self):
         return '%s' % self.filename
 
     class Meta:
-        ordering = ['filename',]
+        ordering = ('filename',)
         verbose_name = _('Attachment')
         verbose_name_plural = _('Attachments')
 
@@ -852,32 +888,31 @@ class PreSetReply(models.Model):
     When replying to a ticket, the user can select any reply set for the current
     queue, and the body text is fetched via AJAX.
     """
+    class Meta:
+        ordering = ('name',)
+        verbose_name = _('Pre-set reply')
+        verbose_name_plural = _('Pre-set replies')
 
     queues = models.ManyToManyField(
         Queue,
         blank=True,
         help_text=_('Leave blank to allow this reply to be used for all '
-            'queues, or select those queues you wish to limit this reply to.'),
-        )
+                    'queues, or select those queues you wish to limit this reply to.'),
+    )
 
     name = models.CharField(
         _('Name'),
         max_length=100,
         help_text=_('Only used to assist users with selecting a reply - not '
-            'shown to the user.'),
-        )
+                    'shown to the user.'),
+    )
 
     body = models.TextField(
         _('Body'),
         help_text=_('Context available: {{ ticket }} - ticket object (eg '
-            '{{ ticket.title }}); {{ queue }} - The queue; and {{ user }} '
-            '- the current user.'),
-        )
-
-    class Meta:
-        ordering = ['name',]
-        verbose_name = _('Pre-set reply')
-        verbose_name_plural = _('Pre-set replies')
+                    '{{ ticket.title }}); {{ queue }} - The queue; and {{ user }} '
+                    '- the current user.'),
+    )
 
     def __str__(self):
         return '%s' % self.name
@@ -898,20 +933,19 @@ class EscalationExclusion(models.Model):
     queues = models.ManyToManyField(
         Queue,
         blank=True,
-        help_text=_('Leave blank for this exclusion to be applied to all '
-            'queues, or select those queues you wish to exclude with this '
-            'entry.'),
-        )
+        help_text=_('Leave blank for this exclusion to be applied to all queues, '
+                    'or select those queues you wish to exclude with this entry.'),
+    )
 
     name = models.CharField(
         _('Name'),
         max_length=100,
-        )
+    )
 
     date = models.DateField(
         _('Date'),
         help_text=_('Date on which escalation should not happen'),
-        )
+    )
 
     def __str__(self):
         return '%s' % self.name
@@ -934,36 +968,35 @@ class EmailTemplate(models.Model):
     template_name = models.CharField(
         _('Template Name'),
         max_length=100,
-        )
+    )
 
     subject = models.CharField(
         _('Subject'),
         max_length=100,
         help_text=_('This will be prefixed with "[ticket.ticket] ticket.title"'
-            '. We recommend something simple such as "(Updated") or "(Closed)"'
-            ' - the same context is available as in plain_text, below.'),
-        )
+                    '. We recommend something simple such as "(Updated") or "(Closed)"'
+                    ' - the same context is available as in plain_text, below.'),
+    )
 
     heading = models.CharField(
         _('Heading'),
         max_length=100,
         help_text=_('In HTML e-mails, this will be the heading at the top of '
-            'the email - the same context is available as in plain_text, '
-            'below.'),
-        )
+                    'the email - the same context is available as in plain_text, '
+                    'below.'),
+    )
 
     plain_text = models.TextField(
         _('Plain Text'),
         help_text=_('The context available to you includes {{ ticket }}, '
-            '{{ queue }}, and depending on the time of the call: '
-            '{{ resolution }} or {{ comment }}.'),
-        )
+                    '{{ queue }}, and depending on the time of the call: '
+                    '{{ resolution }} or {{ comment }}.'),
+    )
 
     html = models.TextField(
         _('HTML'),
-        help_text=_('The same context is available here as in plain_text, '
-            'above.'),
-        )
+        help_text=_('The same context is available here as in plain_text, above.'),
+    )
 
     locale = models.CharField(
         _('Locale'),
@@ -971,13 +1004,13 @@ class EmailTemplate(models.Model):
         blank=True,
         null=True,
         help_text=_('Locale of this template.'),
-        )
+    )
 
     def __str__(self):
         return '%s' % self.template_name
 
     class Meta:
-        ordering = ['template_name', 'locale']
+        ordering = ('template_name', 'locale')
         verbose_name = _('e-mail template')
         verbose_name_plural = _('e-mail templates')
 
@@ -992,26 +1025,26 @@ class KBCategory(models.Model):
     title = models.CharField(
         _('Title'),
         max_length=100,
-        )
+    )
 
     slug = models.SlugField(
         _('Slug'),
-        )
+    )
 
     description = models.TextField(
         _('Description'),
-        )
+    )
 
     def __str__(self):
         return '%s' % self.title
 
     class Meta:
-        ordering = ['title',]
+        ordering = ('title',)
         verbose_name = _('Knowledge base category')
         verbose_name_plural = _('Knowledge base categories')
 
     def get_absolute_url(self):
-        return ('helpdesk_kb_category', (), {'slug': self.slug})
+        return 'helpdesk:kb_category', (), {'slug': self.slug}
     get_absolute_url = models.permalink(get_absolute_url)
 
 
@@ -1024,39 +1057,38 @@ class KBItem(models.Model):
     category = models.ForeignKey(
         KBCategory,
         verbose_name=_('Category'),
-        )
+    )
 
     title = models.CharField(
         _('Title'),
         max_length=100,
-        )
+    )
 
     question = models.TextField(
         _('Question'),
-        )
+    )
 
     answer = models.TextField(
         _('Answer'),
-        )
+    )
 
     votes = models.IntegerField(
         _('Votes'),
         help_text=_('Total number of votes cast for this item'),
         default=0,
-        )
+    )
 
     recommendations = models.IntegerField(
         _('Positive Votes'),
         help_text=_('Number of votes for this item which were POSITIVE.'),
         default=0,
-        )
+    )
 
     last_updated = models.DateTimeField(
         _('Last Updated'),
-        help_text=_('The date on which this question was most recently '
-            'changed.'),
+        help_text=_('The date on which this question was most recently changed.'),
         blank=True,
-        )
+    )
 
     def save(self, *args, **kwargs):
         if not self.last_updated:
@@ -1074,12 +1106,12 @@ class KBItem(models.Model):
         return '%s' % self.title
 
     class Meta:
-        ordering = ['title',]
+        ordering = ('title',)
         verbose_name = _('Knowledge base item')
         verbose_name_plural = _('Knowledge base items')
 
     def get_absolute_url(self):
-        return ('helpdesk_kb_item', (self.id,))
+        return 'helpdesk:kb_item', (self.id,)
     get_absolute_url = models.permalink(get_absolute_url)
 
 
@@ -1098,25 +1130,25 @@ class SavedSearch(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         verbose_name=_('User'),
-        )
+    )
 
     title = models.CharField(
         _('Query Name'),
         max_length=100,
         help_text=_('User-provided name for this query'),
-        )
+    )
 
     shared = models.BooleanField(
         _('Shared With Other Users?'),
         blank=True,
         default=False,
         help_text=_('Should other users see this query?'),
-        )
+    )
 
     query = models.TextField(
         _('Search Query'),
         help_text=_('Pickled query object. Be wary changing this.'),
-        )
+    )
 
     def __str__(self):
         if self.shared:
@@ -1136,17 +1168,20 @@ class UserSettings(models.Model):
     as notification preferences and other things that should probably be
     configurable.
 
-    We should always refer to user.usersettings.settings['setting_name'].
+    We should always refer to user.usersettings_helpdesk.settings['setting_name'].
     """
 
-    user = models.OneToOneField(settings.AUTH_USER_MODEL)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        related_name="usersettings_helpdesk")
 
     settings_pickled = models.TextField(
         _('Settings Dictionary'),
-        help_text=_('This is a base64-encoded representation of a pickled Python dictionary. Do not change this field via the admin.'),
+        help_text=_('This is a base64-encoded representation of a pickled Python dictionary. '
+                    'Do not change this field via the admin.'),
         blank=True,
         null=True,
-        )
+    )
 
     def _set_settings(self, data):
         # data should always be a Python dictionary.
@@ -1192,15 +1227,7 @@ def create_usersettings(sender, instance, created, **kwargs):
     if created:
         UserSettings.objects.create(user=instance, settings=DEFAULT_USER_SETTINGS)
 
-try:
-    # Connecting via settings.AUTH_USER_MODEL (string) fails in Django < 1.7. We need the actual model there.
-    # https://docs.djangoproject.com/en/1.7/topics/auth/customizing/#referencing-the-user-model
-    if VERSION < (1, 7):
-        raise ValueError
-    models.signals.post_save.connect(create_usersettings, sender=settings.AUTH_USER_MODEL)
-except:
-    signal_user = get_user_model()
-    models.signals.post_save.connect(create_usersettings, sender=signal_user)
+models.signals.post_save.connect(create_usersettings, sender=settings.AUTH_USER_MODEL)
 
 
 @python_2_unicode_compatible
@@ -1210,41 +1237,43 @@ class IgnoreEmail(models.Model):
     processing IMAP and POP3 mailboxes, eg mails from postmaster or from
     known trouble-makers.
     """
+    class Meta:
+        verbose_name = _('Ignored e-mail address')
+        verbose_name_plural = _('Ignored e-mail addresses')
+
     queues = models.ManyToManyField(
         Queue,
         blank=True,
-        help_text=_('Leave blank for this e-mail to be ignored on all '
-            'queues, or select those queues you wish to ignore this e-mail '
-            'for.'),
-        )
+        help_text=_('Leave blank for this e-mail to be ignored on all queues, '
+                    'or select those queues you wish to ignore this e-mail for.'),
+    )
 
     name = models.CharField(
         _('Name'),
         max_length=100,
-        )
+    )
 
     date = models.DateField(
         _('Date'),
         help_text=_('Date on which this e-mail address was added'),
         blank=True,
         editable=False
-        )
+    )
 
     email_address = models.CharField(
         _('E-Mail Address'),
         max_length=150,
         help_text=_('Enter a full e-mail address, or portions with '
-            'wildcards, eg *@domain.com or postmaster@*.'),
-        )
+                    'wildcards, eg *@domain.com or postmaster@*.'),
+    )
 
     keep_in_mailbox = models.BooleanField(
         _('Save Emails in Mailbox?'),
         blank=True,
         default=False,
-        help_text=_('Do you want to save emails from this address in the '
-            'mailbox? If this is unticked, emails from this address will '
-            'be deleted.'),
-        )
+        help_text=_('Do you want to save emails from this address in the mailbox? '
+                    'If this is unticked, emails from this address will be deleted.'),
+    )
 
     def __str__(self):
         return '%s' % self.name
@@ -1253,6 +1282,16 @@ class IgnoreEmail(models.Model):
         if not self.date:
             self.date = timezone.now()
         return super(IgnoreEmail, self).save(*args, **kwargs)
+
+    def queue_list(self):
+        """Return a list of the queues this IgnoreEmail applies to.
+        If this IgnoreEmail applies to ALL queues, return '*'.
+        """
+        queues = self.queues.all().order_by('title')
+        if len(queues) == 0:
+            return '*'
+        else:
+            return ', '.join([str(q) for q in queues])
 
     def test(self, email):
         """
@@ -1269,17 +1308,13 @@ class IgnoreEmail(models.Model):
         own_parts = self.email_address.split("@")
         email_parts = email.split("@")
 
-        if self.email_address == email                              \
-        or own_parts[0] == "*" and own_parts[1] == email_parts[1]   \
-        or own_parts[1] == "*" and own_parts[0] == email_parts[0]   \
-        or own_parts[0] == "*" and own_parts[1] == "*":
+        if self.email_address == email or \
+                own_parts[0] == "*" and own_parts[1] == email_parts[1] or \
+                own_parts[1] == "*" and own_parts[0] == email_parts[0] or \
+                own_parts[0] == "*" and own_parts[1] == "*":
             return True
         else:
             return False
-
-    class Meta:
-        verbose_name = _('Ignored e-mail address')
-        verbose_name_plural = _('Ignored e-mail addresses')
 
 
 @python_2_unicode_compatible
@@ -1296,7 +1331,7 @@ class TicketCC(models.Model):
     ticket = models.ForeignKey(
         Ticket,
         verbose_name=_('Ticket'),
-        )
+    )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -1304,28 +1339,28 @@ class TicketCC(models.Model):
         null=True,
         help_text=_('User who wishes to receive updates for this ticket.'),
         verbose_name=_('User'),
-        )
+    )
 
     email = models.EmailField(
         _('E-Mail Address'),
         blank=True,
         null=True,
         help_text=_('For non-user followers, enter their e-mail address'),
-        )
+    )
 
     can_view = models.BooleanField(
         _('Can View Ticket?'),
         blank=True,
         default=False,
         help_text=_('Can this CC login to view the ticket details?'),
-        )
+    )
 
     can_update = models.BooleanField(
         _('Can Update Ticket?'),
         blank=True,
         default=False,
         help_text=_('Can this CC login and update the ticket?'),
-        )
+    )
 
     def _email_address(self):
         if self.user and self.user.email is not None:
@@ -1344,7 +1379,9 @@ class TicketCC(models.Model):
     def __str__(self):
         return '%s for %s' % (self.display, self.ticket.title)
 
+
 class CustomFieldManager(models.Manager):
+
     def get_queryset(self):
         return super(CustomFieldManager, self).get_queryset().order_by('ordering')
 
@@ -1357,84 +1394,83 @@ class CustomField(models.Model):
 
     name = models.SlugField(
         _('Field Name'),
-        help_text=_('As used in the database and behind the scenes. Must be unique and consist of only lowercase letters with no punctuation.'),
+        help_text=_('As used in the database and behind the scenes. '
+                    'Must be unique and consist of only lowercase letters with no punctuation.'),
         unique=True,
-        )
+    )
 
     label = models.CharField(
         _('Label'),
         max_length=30,
         help_text=_('The display label for this field'),
-        )
+    )
 
     help_text = models.TextField(
         _('Help Text'),
         help_text=_('Shown to the user when editing the ticket'),
         blank=True,
         null=True
-        )
+    )
 
     DATA_TYPE_CHOICES = (
-            ('varchar', _('Character (single line)')),
-            ('text', _('Text (multi-line)')),
-            ('integer', _('Integer')),
-            ('decimal', _('Decimal')),
-            ('list', _('List')),
-            ('boolean', _('Boolean (checkbox yes/no)')),
-            ('date', _('Date')),
-            ('time', _('Time')),
-            ('datetime', _('Date & Time')),
-            ('email', _('E-Mail Address')),
-            ('url', _('URL')),
-            ('ipaddress', _('IP Address')),
-            ('slug', _('Slug')),
-            )
+        ('varchar', _('Character (single line)')),
+        ('text', _('Text (multi-line)')),
+        ('integer', _('Integer')),
+        ('decimal', _('Decimal')),
+        ('list', _('List')),
+        ('boolean', _('Boolean (checkbox yes/no)')),
+        ('date', _('Date')),
+        ('time', _('Time')),
+        ('datetime', _('Date & Time')),
+        ('email', _('E-Mail Address')),
+        ('url', _('URL')),
+        ('ipaddress', _('IP Address')),
+        ('slug', _('Slug')),
+    )
 
     data_type = models.CharField(
         _('Data Type'),
         max_length=100,
         help_text=_('Allows you to restrict the data entered into this field'),
         choices=DATA_TYPE_CHOICES,
-        )
+    )
 
     max_length = models.IntegerField(
         _('Maximum Length (characters)'),
         blank=True,
         null=True,
-        )
+    )
 
     decimal_places = models.IntegerField(
         _('Decimal Places'),
         help_text=_('Only used for decimal fields'),
         blank=True,
         null=True,
-        )
+    )
 
     empty_selection_list = models.BooleanField(
         _('Add empty first choice to List?'),
         default=False,
-        help_text=_('Only for List: adds an empty first entry to the choices list, which enforces that the user makes an active choice.'),
-        )
+        help_text=_('Only for List: adds an empty first entry to the choices list, '
+                    'which enforces that the user makes an active choice.'),
+    )
 
     list_values = models.TextField(
         _('List Values'),
         help_text=_('For list fields only. Enter one option per line.'),
         blank=True,
         null=True,
-        )
+    )
 
     ordering = models.IntegerField(
         _('Ordering'),
         help_text=_('Lower numbers are displayed first; higher numbers are listed later'),
         blank=True,
         null=True,
-        )
+    )
 
     def _choices_as_array(self):
-        try:
-            from StringIO import StringIO
-        except ImportError:
-            from io import StringIO
+        from django.utils.six import StringIO
         valuebuffer = StringIO(self.list_values)
         choices = [[item.strip(), item.strip()] for item in valuebuffer.readlines()]
         valuebuffer.close()
@@ -1445,18 +1481,19 @@ class CustomField(models.Model):
         _('Required?'),
         help_text=_('Does the user have to enter a value for this field?'),
         default=False,
-        )
+    )
 
     staff_only = models.BooleanField(
         _('Staff Only?'),
-        help_text=_('If this is ticked, then the public submission form will NOT show this field'),
+        help_text=_('If this is ticked, then the public submission form '
+                    'will NOT show this field'),
         default=False,
-        )
+    )
 
     objects = CustomFieldManager()
 
     def __str__(self):
-        return '%s' % (self.name)
+        return '%s' % self.name
 
     class Meta:
         verbose_name = _('Custom field')
@@ -1468,12 +1505,12 @@ class TicketCustomFieldValue(models.Model):
     ticket = models.ForeignKey(
         Ticket,
         verbose_name=_('Ticket'),
-        )
+    )
 
     field = models.ForeignKey(
         CustomField,
         verbose_name=_('Field'),
-        )
+    )
 
     value = models.TextField(blank=True, null=True)
 
@@ -1481,9 +1518,7 @@ class TicketCustomFieldValue(models.Model):
         return '%s / %s' % (self.ticket, self.field)
 
     class Meta:
-        unique_together = ('ticket', 'field'),
-
-    class Meta:
+        unique_together = (('ticket', 'field'),)
         verbose_name = _('Ticket custom field value')
         verbose_name_plural = _('Ticket custom field values')
 
@@ -1495,22 +1530,22 @@ class TicketDependency(models.Model):
     To help enforce this, a helper function `can_be_resolved` on each Ticket instance checks that
     these have all been resolved.
     """
+    class Meta:
+        unique_together = (('ticket', 'depends_on'),)
+        verbose_name = _('Ticket dependency')
+        verbose_name_plural = _('Ticket dependencies')
+
     ticket = models.ForeignKey(
         Ticket,
         verbose_name=_('Ticket'),
         related_name='ticketdependency',
-        )
+    )
 
     depends_on = models.ForeignKey(
         Ticket,
         verbose_name=_('Depends On Ticket'),
         related_name='depends_on',
-        )
+    )
 
     def __str__(self):
         return '%s / %s' % (self.ticket, self.depends_on)
-
-    class Meta:
-        unique_together = ('ticket', 'depends_on')
-        verbose_name = _('Ticket dependency')
-        verbose_name_plural = _('Ticket dependencies')
