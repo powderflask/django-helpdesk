@@ -382,6 +382,12 @@ class PublicTicketForm(AbstractTicketForm):
         help_text=_('We will e-mail you when your ticket is updated.'),
     )
 
+    due_date = forms.DateTimeField(  # JFall - hide due date on public-facing form.
+        widget=forms.HiddenInput(),
+        required=False,
+        label=_('Due on'),
+    )
+
     def __init__(self, *args, **kwargs):
         """
         Add any (non-staff) custom fields that are defined to the form
