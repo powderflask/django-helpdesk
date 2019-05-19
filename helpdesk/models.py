@@ -1350,11 +1350,13 @@ class TicketCC(models.Model):
 
     ticket = models.ForeignKey(
         Ticket,
+        on_delete=models.CASCADE,
         verbose_name=_('Ticket'),
     )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
         blank=True,
         null=True,
         help_text=_('User who wishes to receive updates for this ticket.'),
@@ -1524,11 +1526,13 @@ class CustomField(models.Model):
 class TicketCustomFieldValue(models.Model):
     ticket = models.ForeignKey(
         Ticket,
+        on_delete=models.CASCADE,
         verbose_name=_('Ticket'),
     )
 
     field = models.ForeignKey(
         CustomField,
+        on_delete=models.CASCADE,
         verbose_name=_('Field'),
     )
 
@@ -1557,12 +1561,14 @@ class TicketDependency(models.Model):
 
     ticket = models.ForeignKey(
         Ticket,
+        on_delete=models.CASCADE,
         verbose_name=_('Ticket'),
         related_name='ticketdependency',
     )
 
     depends_on = models.ForeignKey(
         Ticket,
+        on_delete=models.CASCADE,
         verbose_name=_('Depends On Ticket'),
         related_name='depends_on',
     )
