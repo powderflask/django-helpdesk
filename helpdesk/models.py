@@ -839,13 +839,13 @@ import os
 
 def validate_file_extension(data, whitelist=None):
     # look for default whitelist in settings if one is not provided.
-    if not whitelist:
-        whitelist = settings.FILE_UPLOAD_WHITELIST
+    whitelist = whitelist or getattr(settings, 'FILE_UPLOAD_WHITELIST', None)
+
 
     filename = data.name
     ext = os.path.splitext(filename)[1]
     ext = ext.lower()
-    if ext not in whitelist:
+    if whitelist and ext not in whitelist:
         raise ValidationError("Filetype %s is not allowed!"%(ext))
 
 
