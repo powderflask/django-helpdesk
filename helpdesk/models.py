@@ -14,8 +14,10 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from django.utils import six
 from django.utils.translation import ugettext_lazy as _, ugettext
 from django.utils.encoding import python_2_unicode_compatible
+import re
 from django.core.exceptions import ValidationError
 
 
@@ -256,11 +258,11 @@ class Queue(models.Model):
 
     default_owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
         related_name='default_owner',
         blank=True,
         null=True,
         verbose_name=_('Default owner'),
-        on_delete=models.SET_NULL,
     )
 
     def __str__(self):
@@ -278,7 +280,13 @@ class Queue(models.Model):
         in the sender name field, so hopefully the admin can see and fix it.
         """
         if not self.email_address:
-            return u'NO QUEUE EMAIL ADDRESS DEFINED <%s>' % settings.DEFAULT_FROM_EMAIL
+            # must check if given in format "Foo <foo@example.com>"
+            default_email = re.match(".*<(?P<email>.*@*.)>", settings.DEFAULT_FROM_EMAIL)
+            if default_email is not None:
+                # already in the right format, so just include it here
+                return u'NO QUEUE EMAIL ADDRESS DEFINED %s' % settings.DEFAULT_FROM_EMAIL
+            else:
+                return u'NO QUEUE EMAIL ADDRESS DEFINED <%s>' % settings.DEFAULT_FROM_EMAIL
         else:
             return u'%s <%s>' % (self.title, self.email_address)
     from_address = property(_from_address)
@@ -377,6 +385,7 @@ class Milestone(models.Model):
         verbose_name_plural = _('Milestones')
 
 
+@python_2_unicode_compatible
 class Ticket(models.Model):
     """
     To allow a ticket to be entered as quickly as possible, only the
@@ -441,6 +450,7 @@ class Ticket(models.Model):
 
     queue = models.ForeignKey(
         Queue,
+        on_delete=models.CASCADE,
         verbose_name=_('Queue'),
     )
 
@@ -480,6 +490,7 @@ class Ticket(models.Model):
 
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
         related_name='assigned_to',
         blank=True,
         null=True,
@@ -593,10 +604,11 @@ class Ticket(models.Model):
         a URL to the submitter of a ticket.
         """
         from django.contrib.sites.models import Site
-        from django.core.urlresolvers import reverse
+        from django.core.exceptions import ImproperlyConfigured
+        from django.urls import reverse
         try:
             site = Site.objects.get_current()
-        except:
+        except ImproperlyConfigured:
             site = Site(domain='configure-django-sites.com')
         return u"http://%s%s?ticket=%s&email=%s" % (
             site.domain,
@@ -612,10 +624,11 @@ class Ticket(models.Model):
         a staff member (in emails etc)
         """
         from django.contrib.sites.models import Site
-        from django.core.urlresolvers import reverse
+        from django.core.exceptions import ImproperlyConfigured
+        from django.urls import reverse
         try:
             site = Site.objects.get_current()
-        except:
+        except ImproperlyConfigured:
             site = Site(domain='configure-django-sites.com')
         return u"http://%s%s" % (
             site.domain,
@@ -645,8 +658,8 @@ class Ticket(models.Model):
         return '%s %s' % (self.id, self.title)
 
     def get_absolute_url(self):
-        return 'helpdesk:view', (self.id,)
-    get_absolute_url = models.permalink(get_absolute_url)
+        from django.urls import reverse
+        return reverse('helpdesk:view', args=(self.id,))
 
     def save(self, *args, **kwargs):
         if not self.id:
@@ -694,6 +707,7 @@ class FollowUp(models.Model):
 
     ticket = models.ForeignKey(
         Ticket,
+        on_delete=models.CASCADE,
         verbose_name=_('Ticket'),
     )
 
@@ -725,6 +739,7 @@ class FollowUp(models.Model):
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
         blank=True,
         null=True,
         verbose_name=_('User'),
@@ -767,6 +782,7 @@ class TicketChange(models.Model):
 
     followup = models.ForeignKey(
         FollowUp,
+        on_delete=models.CASCADE,
         verbose_name=_('Follow-up'),
     )
 
@@ -842,6 +858,7 @@ class Attachment(models.Model):
 
     followup = models.ForeignKey(
         FollowUp,
+        on_delete=models.CASCADE,
         verbose_name=_('Follow-up'),
     )
 
@@ -1044,8 +1061,8 @@ class KBCategory(models.Model):
         verbose_name_plural = _('Knowledge base categories')
 
     def get_absolute_url(self):
-        return 'helpdesk:kb_category', (), {'slug': self.slug}
-    get_absolute_url = models.permalink(get_absolute_url)
+        from django.urls import reverse
+        return reverse('helpdesk:kb_category', kwargs={'slug': self.slug})
 
 
 @python_2_unicode_compatible
@@ -1056,6 +1073,7 @@ class KBItem(models.Model):
     """
     category = models.ForeignKey(
         KBCategory,
+        on_delete=models.CASCADE,
         verbose_name=_('Category'),
     )
 
@@ -1111,8 +1129,8 @@ class KBItem(models.Model):
         verbose_name_plural = _('Knowledge base items')
 
     def get_absolute_url(self):
-        return 'helpdesk:kb_item', (self.id,)
-    get_absolute_url = models.permalink(get_absolute_url)
+        from django.urls import reverse
+        return reverse('helpdesk:kb_item', args=(self.id,))
 
 
 @python_2_unicode_compatible
@@ -1129,6 +1147,7 @@ class SavedSearch(models.Model):
     """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
         verbose_name=_('User'),
     )
 
@@ -1173,6 +1192,7 @@ class UserSettings(models.Model):
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
         related_name="usersettings_helpdesk")
 
     settings_pickled = models.TextField(

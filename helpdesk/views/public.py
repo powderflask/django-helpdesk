@@ -7,24 +7,29 @@ views/public.py - All public facing views, eg non-staff (no authentication
                   required) views.
 """
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.urlresolvers import reverse
-from django.http import HttpResponseRedirect
+try:
+    # Django 2.0+
+    from django.urls import reverse
+except ImportError:
+    # Django < 2
+    from django.core.urlresolvers import reverse
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render
 from django.utils.http import urlquote
 from django.utils.translation import ugettext as _
+from django.conf import settings
 
 from helpdesk import settings as helpdesk_settings
+from helpdesk.decorators import protect_view
 from helpdesk.forms import PublicTicketForm
 from helpdesk.lib import text_is_spam
 from helpdesk.models import Ticket, Queue, UserSettings, KBCategory
 
 
+@protect_view
 def homepage(request):
-    if not request.user.is_authenticated() and helpdesk_settings.HELPDESK_REDIRECT_TO_LOGIN_BY_DEFAULT:
-        return HttpResponseRedirect(reverse('helpdesk:login'))
-
     if request.user.is_staff or \
-            (request.user.is_authenticated() and
+            (request.user.is_authenticated and
              helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE):
         try:
             if request.user.usersettings_helpdesk.settings.get('login_view_ticketlist', False):
@@ -44,28 +49,48 @@ def homepage(request):
                 return render(request, template_name='helpdesk/public_spam.html')
             else:
                 ticket = form.save()
-                return HttpResponseRedirect('%s?ticket=%s&email=%s' % (
-                    reverse('helpdesk:public_view'),
-                    ticket.ticket_for_url,
-                    urlquote(ticket.submitter_email))
-                )
+                try:
+                    return HttpResponseRedirect('%s?ticket=%s&email=%s' % (
+                        reverse('helpdesk:public_view'),
+                        ticket.ticket_for_url,
+                        urlquote(ticket.submitter_email))
+                    )
+                except ValueError:
+                    # if someone enters a non-int string for the ticket
+                    return HttpResponseRedirect(reverse('helpdesk:home'))
     else:
         try:
             queue = Queue.objects.get(slug=request.GET.get('queue', None))
         except Queue.DoesNotExist:
             queue = None
         initial_data = {}
+
+        # add pre-defined data for public ticket
+        if hasattr(settings, 'HELPDESK_PUBLIC_TICKET_QUEUE'):
+            # get the requested queue; return an error if queue not found
+            try:
+                queue = Queue.objects.get(slug=settings.HELPDESK_PUBLIC_TICKET_QUEUE)
+            except Queue.DoesNotExist:
+                return HttpResponse(status=500)
+        if hasattr(settings, 'HELPDESK_PUBLIC_TICKET_PRIORITY'):
+            initial_data['priority'] = settings.HELPDESK_PUBLIC_TICKET_PRIORITY
+        if hasattr(settings, 'HELPDESK_PUBLIC_TICKET_DUE_DATE'):
+            initial_data['due_date'] = settings.HELPDESK_PUBLIC_TICKET_DUE_DATE
+
         if queue:
             initial_data['queue'] = queue.id
 
-        if request.user.is_authenticated() and request.user.email:
+        if request.user.is_authenticated and request.user.email:
             initial_data['submitter_email'] = request.user.email
 
         form = PublicTicketForm(initial=initial_data)
         form.fields['queue'].choices = [('', '--------')] + [
             (q.id, q.title) for q in Queue.objects.filter(allow_public_submission=True)]
 
-    knowledgebase_categories = KBCategory.objects.all()
+    knowledgebase_categories = None
+
+    if helpdesk_settings.HELPDESK_KB_ENABLED:
+        knowledgebase_categories = KBCategory.objects.all()
 
     return render(request, 'helpdesk/public_homepage.html', {
         'form': form,
@@ -74,6 +99,7 @@ def homepage(request):
     })
 
 
+@protect_view
 def view_ticket(request):
     ticket_req = request.GET.get('ticket', None)
     email = request.GET.get('email', None)
@@ -83,6 +109,8 @@ def view_ticket(request):
         try:
             ticket = Ticket.objects.get(id=ticket_id, submitter_email__iexact=email)
         except ObjectDoesNotExist:
+            error_message = _('Invalid ticket ID or e-mail address. Please try again.')
+        except ValueError:
             error_message = _('Invalid ticket ID or e-mail address. Please try again.')
         else:
             if request.user.is_staff:

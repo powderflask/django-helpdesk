@@ -4,11 +4,11 @@ Default settings for django-helpdesk.
 """
 
 from django.conf import settings
-
+from django.core.exceptions import ImproperlyConfigured
 
 try:
     DEFAULT_USER_SETTINGS = settings.HELPDESK_DEFAULT_SETTINGS
-except:
+except AttributeError:
     DEFAULT_USER_SETTINGS = None
 
 if not isinstance(DEFAULT_USER_SETTINGS, dict):
@@ -31,6 +31,11 @@ HAS_TAG_SUPPORT = False
 HELPDESK_REDIRECT_TO_LOGIN_BY_DEFAULT = getattr(settings,
                                                 'HELPDESK_REDIRECT_TO_LOGIN_BY_DEFAULT',
                                                 False)
+
+# raises a 404 to anon users. It's like it was invisible
+HELPDESK_ANON_ACCESS_RAISES_404 = getattr(settings,
+                                          'HELPDESK_ANON_ACCESS_RAISES_404',
+                                          False)
 
 # show knowledgebase links?
 HELPDESK_KB_ENABLED = getattr(settings, 'HELPDESK_KB_ENABLED', True)
@@ -112,6 +117,10 @@ HELPDESK_STAFF_ONLY_TICKET_CC = getattr(settings, 'HELPDESK_STAFF_ONLY_TICKET_CC
 HELPDESK_EMAIL_SUBJECT_TEMPLATE = getattr(
     settings, 'HELPDESK_EMAIL_SUBJECT_TEMPLATE',
     "{{ ticket.ticket }} {{ ticket.title|safe }} %(subject)s")
+# since django-helpdesk may not work correctly without the ticket ID
+# in the subject, let's do a check for it quick:
+if HELPDESK_EMAIL_SUBJECT_TEMPLATE.find("ticket.ticket") < 0:
+    raise ImproperlyConfigured
 
 # default fallback locale when queue locale not found
 HELPDESK_EMAIL_FALLBACK_LOCALE = getattr(settings, 'HELPDESK_EMAIL_FALLBACK_LOCALE', 'en')

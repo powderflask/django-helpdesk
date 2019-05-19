@@ -20,7 +20,7 @@ $(document).ready(function() {
     $('#id_preset').change(function() {
         preset = $('#id_preset').val();
         if (preset != '') {
-            $.get("{% url 'helpdesk:raw' 'preset' %}?id=" + preset, function(data) {
+            $.get("{% url 'helpdesk:raw' "preset" %}?id=" + preset, function(data) {
                 $("#commentBox").val(data)
             });
         }
@@ -100,11 +100,14 @@ $(document).on('change', ':file', function() {
                         {% for attachment in followup.attachment_set.all %}{% if forloop.first %}<hr><div class='attachments'><ul>{% endif %}
                             <li><a href='{{ attachment.file.url }}'>{{ attachment.filename }}</a> ({{ attachment.mime_type }}, {{ attachment.size|filesizeformat }})
                             {% if followup.user and request.user == followup.user %}
-                            <a href="{% url 'helpdesk:attachment_del' ticket.id attachment.id %}"><button class="btn btn-danger btn-xs"><i class="fa fa-trash"></i>&nbsp;{% trans 'Delete' %}</button></a>
+                            <a href='{% url 'helpdesk:attachment_del' ticket.id attachment.id %}'><button class="btn btn-danger btn-xs"><i class="fa fa-trash"></i>&nbsp;{% trans 'Delete' %}</button></a>
                             {% endif %}
                             </li>
                             {% if forloop.last %}</ul></div>{% endif %}
                         {% endfor %}
+<!--- ugly long test to suppress the following if it will be empty, to save vertical space -->
+{% with possible=helpdesk_settings.HELPDESK_SHOW_EDIT_BUTTON_FOLLOW_UP %}
+    {% if  possible and followup.user and request.user == followup.user and not followup.ticketchange_set.all or  possible and user.is_superuser and helpdesk_settings.HELPDESK_SHOW_DELETE_BUTTON_SUPERUSER_FOLLOW_UP %}
                         <hr>
                         <div class="btn-group">
                             {% if helpdesk_settings.HELPDESK_SHOW_EDIT_BUTTON_FOLLOW_UP %}
@@ -116,6 +119,7 @@ $(document).on('change', ':file', function() {
                                 <a href="{% url 'helpdesk:followup_delete' ticket.id followup.id %}" class='followup-edit'><button type="button" class="btn btn-warning btn-xs"><i class="fa fa-trash"></i>&nbsp;{% trans "Delete" %}</button></a>
                             {% endif %}
                         </div>
+{% endif %}{% endwith %}
                     </div>
                 </div>
             </li>
@@ -190,7 +194,7 @@ $(document).on('change', ':file', function() {
         {% endifequal %}
 
         {% if helpdesk_settings.HELPDESK_UPDATE_PUBLIC_DEFAULT %}
-        <input type='hidden' name='public' value='1' checked='checked'>
+        <input type='hidden' name='public' value='1'>
         {% else %}
         <dt>
             <label for='id_public'>{% trans "Is this update public?" %}</label> <span class='form_optional'>{% trans "(Optional)" %}</span>
@@ -256,7 +260,7 @@ $(document).on('change', ':file', function() {
 
 <script>
 $( function() {
-    $( "#id_due_date" ).datepicker();
+	$( "#id_due_date" ).datepicker({dateFormat: 'yy-mm-dd'});
 } );
 </script>
 

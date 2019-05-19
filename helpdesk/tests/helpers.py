@@ -5,12 +5,18 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
-def get_staff_user(username='helpdesk.staff', password='password'):
+def get_user(username='helpdesk.staff',
+             password='password',
+             is_staff=False,
+             is_superuser=False):
     try:
         user = User.objects.get(username=username)
     except User.DoesNotExist:
-        user = User.objects.create_user(username=username, password=password, email='staff@example.com')
-        user.is_staff = True
+        user = User.objects.create_user(username=username,
+                                        password=password,
+                                        email='%s@example.com' % username)
+        user.is_staff = is_staff
+        user.is_superuser = is_superuser
         user.save()
     else:
         user.set_password(password)
@@ -20,7 +26,11 @@ def get_staff_user(username='helpdesk.staff', password='password'):
 
 def reload_urlconf(urlconf=None):
 
-    from imp import reload  # python 3 needs this import.
+    from django.utils import six
+    if six.PY2:
+        from imp import reload
+    else:
+        from importlib import reload
 
     if urlconf is None:
         from django.conf import settings
@@ -33,7 +43,7 @@ def reload_urlconf(urlconf=None):
     if urlconf in sys.modules:
         reload(sys.modules[urlconf])
 
-    from django.core.urlresolvers import clear_url_caches
+    from django.urls import clear_url_caches
     clear_url_caches()
 
 

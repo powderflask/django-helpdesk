@@ -74,17 +74,21 @@ These changes are visible throughout django-helpdesk
 
   **Default:** ``HELPDESK_AUTO_SUBSCRIBE_ON_TICKET_RESPONSE = False``
 
-- **HELPDESK_EMAIL_SUBJECT_TEMPLATE** Subject template for templated emails. ``%(subject)s`` represents the subject wording from the email template (e.g. "(Closed)").
+- **HELPDESK_EMAIL_SUBJECT_TEMPLATE** Subject template for templated emails. ``%(subject)s`` represents the subject wording from the email template (e.g. "(Closed)"). *Warning*: your subject template should always include a ``{{ ticket.ticket }}`` somewhere as many ``django-helpdesk`` features rely on the ticket ID in the subject line in order to correctly route mail to the corresponding ticket. If you leave out the ticket ID, your helpdesk may not work correctly!
 
   **Default:** ``HELPDESK_EMAIL_SUBJECT_TEMPLATE = "{{ ticket.ticket }} {{ ticket.title|safe }} %(subject)s"``
 
 - **HELPDESK_EMAIL_FALLBACK_LOCALE** Fallback locale for templated emails when queue locale not found
 
-  **Default:** ``HELPDESK_EMAIL_FALLBACK_LOCALE= "en"``
+  **Default:** ``HELPDESK_EMAIL_FALLBACK_LOCALE = "en"``
   
 - **QUEUE_EMAIL_BOX_UPDATE_ONLY** Only process mail with a valid tracking ID; all other mail will be ignored instead of creating a new ticket.
 
-  **Default:** ``False``
+  **Default:** ``QUEUE_EMAIL_BOX_UPDATE_ONLY = False``
+  
+- **HELPDESK_ANON_ACCESS_RAISES_404** If True, redirects user to a 404 page when attempting to reach ticket pages while not logged in, rather than redirecting to a login screen.
+
+  **Default:** ``HELPDESK_ANON_ACCESS_RAISES_404 = False``
 
 
 Options shown on public pages
@@ -99,6 +103,22 @@ These options only change display of items on public-facing pages, not staff pag
 - **HELPDESK_SUBMIT_A_TICKET_PUBLIC** Show 'submit a ticket' section & form on public page?
 
   **Default:** ``HELPDESK_SUBMIT_A_TICKET_PUBLIC = True``
+
+
+Options for public ticket submission form
+-----------------------------------------
+
+- **HELPDESK_PUBLIC_TICKET_QUEUE** Sets the queue for tickets submitted through the public form. If defined, the matching form field will be hidden. This cannot be `None` but must be set to a valid queue slug.
+
+  **Default:** Not defined
+
+- **HELPDESK_PUBLIC_TICKET_PRIORITY** Sets the priority for tickets submitted through the public form. If defined, the matching form field will be hidden. Must be set to a valid integer priority.
+
+  **Default:** Not defined
+
+- **HELPDESK_PUBLIC_TICKET_DUE_DATE** Sets the due date for tickets submitted through the public form. If defined, the matching form field will be hidden. Set to `None` if you want to hide the form field but do not want to define a value.
+
+  **Default:** Not defined
 
 
 Options that change ticket updates
@@ -141,9 +161,9 @@ Staff Ticket Creation Settings
 Staff Ticket View Settings
 ------------------------------
 
-- **HELPDESK_ENABLE_PER_QUEUE_PERMISSION** If ``True``, logged in staff users only see queues and tickets to which they have specifically been granted access -  this holds for the dashboard, ticket query, and ticket report views. User assignment is done through the standard ``django.admin.admin`` permissions. *Note*: Staff with access to admin interface will be able to see the full list of tickets, but won't have access to details and could not modify them. This setting does not prevent staff users from creating tickets for all queues. Also, superuser accounts have full access to all queues, regardless of whatever queue memberships they have been granted.
+- **HELPDESK_ENABLE_PER_QUEUE_STAFF_PERMISSION** If ``True``, logged in staff users only see queues and tickets to which they have specifically been granted access -  this holds for the dashboard, ticket query, and ticket report views. User assignment is done through the standard ``django.admin.admin`` permissions. *Note*: Staff with access to admin interface will be able to see the full list of tickets, but won't have access to details and could not modify them. This setting does not prevent staff users from creating tickets for all queues. Also, superuser accounts have full access to all queues, regardless of whatever queue memberships they have been granted.
 
-  **Default:** ``HELPDESK_ENABLE_PER_QUEUE_PERMISSION = False``
+  **Default:** ``HELPDESK_ENABLE_PER_QUEUE_STAFF_PERMISSION = False``
 
 
 
@@ -191,4 +211,4 @@ The following settings were defined in previous versions and are no longer suppo
 
 - **HELPDESK_FOOTER_SHOW_CHANGE_LANGUAGE_LINK** Is never shown. Use your own template if required.
 
-- **HELPDESK_ENABLE_PER_QUEUE_MEMBERSHIP** Discontinued in favor of HELPDESK_ENABLE_PER_QUEUE_PERMISSION.
+- **HELPDESK_ENABLE_PER_QUEUE_MEMBERSHIP** Discontinued in favor of HELPDESK_ENABLE_PER_QUEUE_STAFF_PERMISSION.
