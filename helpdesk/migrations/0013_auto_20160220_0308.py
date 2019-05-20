@@ -33,6 +33,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='ticket',
             name='milestone',
-            field=models.ForeignKey(verbose_name='Milestone', to='helpdesk.Milestone', null=True, blank=True),
+            field=models.ForeignKey(verbose_name='Milestone', to='helpdesk.Milestone', on_delete=models.deletion.SET_NULL, null=True, blank=True),
         ),
     ]
