@@ -93,7 +93,7 @@
 {% if all_tickets_reported_by_current_user %}
 <h2>{% trans "View a Ticket" %}</h2>
 {% trans "All Tickets submitted by you" as ticket_list_caption %}
-{% include 'helpdesk/include/tickets.html' with ticket_list=all_tickets_reported_by_current_user ticket_list_empty_message="" %}
+{% include 'helpdesk/include/public_tickets.html' with ticket_list=all_tickets_reported_by_current_user ticket_list_empty_message="" %}
 {% endif %}
 
 
