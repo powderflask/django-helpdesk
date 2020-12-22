@@ -31,6 +31,8 @@ from bs4 import BeautifulSoup
 
 from email_reply_parser import EmailReplyParser
 
+
+from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management.base import BaseCommand
@@ -41,9 +43,10 @@ from django.utils import encoding, six, timezone
 from helpdesk import settings
 from helpdesk.lib import send_templated_mail, safe_template_context, process_attachments
 from helpdesk.models import Queue, Ticket, TicketCC, FollowUp, IgnoreEmail
-from django.contrib.auth.models import User
 
 import logging
+
+User = get_user_model()
 
 
 STRIPPED_SUBJECT_STRINGS = [
@@ -98,18 +101,29 @@ def process_email(quiet=False):
         if quiet:
             logger.propagate = False  # do not propagate to root logger that would log to console
         logdir = q.logging_dir or '/var/log/helpdesk/'
-        handler = logging.FileHandler(join(logdir, q.slug + '_get_email.log'))
-        logger.addHandler(handler)
 
-        if not q.email_box_last_check:
-            q.email_box_last_check = timezone.now() - timedelta(minutes=30)
+        try:
+            handler = logging.FileHandler(join(logdir, q.slug + '_get_email.log'))
+            logger.addHandler(handler)
 
-        queue_time_delta = timedelta(minutes=q.email_box_interval or 0)
+            if not q.email_box_last_check:
+                q.email_box_last_check = timezone.now() - timedelta(minutes=30)
 
-        if (q.email_box_last_check + queue_time_delta) < timezone.now():
-            process_queue(q, logger=logger)
-            q.email_box_last_check = timezone.now()
-            q.save()
+            queue_time_delta = timedelta(minutes=q.email_box_interval or 0)
+
+            if (q.email_box_last_check + queue_time_delta) < timezone.now():
+                process_queue(q, logger=logger)
+                q.email_box_last_check = timezone.now()
+                q.save()
+        finally:
+            try:
+                handler.close()
+            except Exception as e:
+                logging.exception(e)
+            try:
+                logger.removeHandler(handler)
+            except Exception as e:
+                logging.exception(e)
 
 
 def process_queue(q, logger):
@@ -311,7 +325,13 @@ def ticket_from_message(message, queue, logger):
 
     sender = message.get('from', _('Unknown Sender'))
     sender = decode_mail_headers(decodeUnknown(message.get_charset(), sender))
-    sender_email = email.utils.parseaddr(sender)[1]
+    # to address bug #832, we wrap all the text in front of the email address in
+    # double quotes by using replace() on the email string. Then,
+    # take first item of list, second item of tuple is the actual email address.
+    # Note that the replace won't work on just an email with no real name,
+    # but the getaddresses() function seems to be able to handle just unclosed quotes
+    # correctly. Not ideal, but this seems to work for now.
+    sender_email = email.utils.getaddresses(['\"' + sender.replace('<', '\" <')])[0][1]
 
     cc = message.get_all('cc', None)
     if cc:
@@ -545,6 +565,17 @@ def ticket_from_message(message, queue, logger):
                 sender=queue.from_address,
                 fail_silently=True,
             )
+        # copy email to all those CC'd to this particular ticket
+        for cc in t.ticketcc_set.all():
+            # don't duplicate email to assignee
+            if not t.assigned_to or (t.assigned_to.email != cc.email_address):
+                send_templated_mail(
+                    'updated_cc',
+                    context,
+                    recipients=cc.email_address,
+                    sender=queue.from_address,
+                    fail_silently=True,
+                )
 
     return t
 

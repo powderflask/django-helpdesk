@@ -123,18 +123,8 @@ def send_templated_mail(template_name,
 
     if files:
         for filename, filefield in files:
-            mime = mimetypes.guess_type(filename)
-            if mime[0] is not None and mime[0] == "text/plain":
-                with open(filefield.path, 'r') as attachedfile:
-                    content = attachedfile.read()
-                    msg.attach(filename, content)
-            else:
-                if six.PY3:
-                    msg.attach_file(filefield.path)
-                else:
-                    with open(filefield.path, 'rb') as attachedfile:
-                        content = attachedfile.read()
-                        msg.attach(filename, content)
+            content = filefield.read()
+            msg.attach(filename, content)
 
     logger.debug('Sending email to: {!r}'.format(recipients))
 
@@ -193,10 +183,12 @@ def apply_query(queryset, params):
             Q(title__icontains=search) |
             Q(description__icontains=search) |
             Q(resolution__icontains=search) |
-            Q(submitter_email__icontains=search)
+            Q(submitter_email__icontains=search) |
+            Q(ticketcustomfieldvalue__value__icontains=search)
         )
 
-        queryset = queryset.filter(qset)
+        # Distinct works, when there are multiple custom fields
+        queryset = queryset.filter(qset).distinct()
 
     sorting = params.get('sorting', None)
     if sorting:
@@ -309,7 +301,7 @@ def text_is_spam(text, request):
 
 
 def process_attachments(followup, attached_files):
-    max_email_attachment_size = getattr(settings, 'MAX_EMAIL_ATTACHMENT_SIZE', 512000)
+    max_email_attachment_size = getattr(settings, 'HELPDESK_MAX_EMAIL_ATTACHMENT_SIZE', 512000)
     attachments = []
 
     for attached in attached_files:
@@ -331,7 +323,7 @@ def process_attachments(followup, attached_files):
 
             if attached.size < max_email_attachment_size:
                 # Only files smaller than 512kb (or as defined in
-                # settings.MAX_EMAIL_ATTACHMENT_SIZE) are sent via email.
+                # settings.HELPDESK_MAX_EMAIL_ATTACHMENT_SIZE) are sent via email.
                 attachments.append([filename, att.file])
 
     return attachments

@@ -15,6 +15,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.core.exceptions import ValidationError, PermissionDenied
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 from django.http import HttpResponseRedirect, Http404, HttpResponse
 from django.shortcuts import render, get_object_or_404
@@ -40,7 +41,6 @@ from helpdesk.models import (
     IgnoreEmail, TicketCC, TicketDependency,
 )
 from helpdesk import settings as helpdesk_settings
-
 
 User = get_user_model()
 
@@ -78,7 +78,9 @@ def _has_access_to_queue(user, queue):
 def _is_my_ticket(user, ticket):
     """Check to see if the user has permission to access
     a ticket. If not then deny access."""
-    if user.is_superuser or user.is_staff or user.id == ticket.assigned_to.id:
+    if user.is_superuser or user.is_staff or helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE:
+        return True
+    elif ticket.assigned_to and user.id == ticket.assigned_to.id:
         return True
     else:
         return False
@@ -91,6 +93,15 @@ def dashboard(request):
     showing ticket counts by queue/status, and a list of unassigned tickets
     with options for them to 'Take' ownership of said tickets.
     """
+
+    # user settings num tickets per page
+    tickets_per_page = request.user.usersettings_helpdesk.settings.get('tickets_per_page') or 25
+
+    # page vars for the three ticket tables
+    user_tickets_page = request.GET.get(_('ut_page'), 1)
+    user_tickets_closed_resolved_page = request.GET.get(_('utcr_page'), 1)
+    all_tickets_reported_by_current_user_page = request.GET.get(_('atrbcu_page'), 1)
+
     CLOSED_STATUSES = [Ticket.CLOSED_STATUS, Ticket.WONT_FIX_STATUS, Ticket.DUPLICATE_STATUS]
     RESOLVED_STATUSES = CLOSED_STATUSES + [Ticket.RESOLVED_STATUS]
     # open & reopened tickets, assigned to current user
@@ -142,6 +153,41 @@ def dashboard(request):
                         q.id IN (%s)""" % (",".join(("%d" % pk for pk in queues)))
     else:
         where_clause = """WHERE   q.id = t.queue_id"""
+
+    # get user assigned tickets page
+    paginator = Paginator(
+        tickets, tickets_per_page)
+    try:
+        tickets = paginator.page(user_tickets_page)
+    except PageNotAnInteger:
+        tickets = paginator.page(1)
+    except EmptyPage:
+        tickets = paginator.page(
+            paginator.num_pages)
+
+    # get user completed tickets page
+    paginator = Paginator(
+        tickets_closed_resolved, tickets_per_page)
+    try:
+        tickets_closed_resolved = paginator.page(
+            user_tickets_closed_resolved_page)
+    except PageNotAnInteger:
+        tickets_closed_resolved = paginator.page(1)
+    except EmptyPage:
+        tickets_closed_resolved = paginator.page(
+            paginator.num_pages)
+
+    # get user submitted tickets page
+    paginator = Paginator(
+        all_tickets_reported_by_current_user, tickets_per_page)
+    try:
+        all_tickets_reported_by_current_user = paginator.page(
+            all_tickets_reported_by_current_user_page)
+    except PageNotAnInteger:
+        all_tickets_reported_by_current_user = paginator.page(1)
+    except EmptyPage:
+        all_tickets_reported_by_current_user = paginator.page(
+            paginator.num_pages)
 
     return render(request, 'helpdesk/dashboard.html', {
         'user_tickets': tickets,
@@ -207,7 +253,8 @@ def followup_edit(request, ticket_id, followup_id):
             new_status = form.cleaned_data['new_status']
             # will save previous date
             old_date = followup.date
-            new_followup = FollowUp(title=title, date=old_date, ticket=_ticket, comment=comment, public=public, new_status=new_status, )
+            new_followup = FollowUp(title=title, date=old_date, ticket=_ticket, comment=comment, public=public,
+                                    new_status=new_status, )
             # keep old user if one did exist before.
             if followup.user:
                 new_followup.user = followup.user
@@ -356,9 +403,8 @@ def subscribe_staff_member_to_ticket(ticket, user):
 def update_ticket(request, ticket_id, public=False):
     if not (public or (
             request.user.is_authenticated and
-            request.user.is_active and (
-                request.user.is_staff or
-                helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE))):
+            request.user.is_active and
+            (request.user.is_staff or helpdesk_settings.HELPDESK_ALLOW_NON_STAFF_TICKET_UPDATE))):
         return HttpResponseRedirect('%s?next=%s' %
                                     (reverse('helpdesk:login'), request.path))
 
@@ -430,7 +476,8 @@ def update_ticket(request, ticket_id, public=False):
     # broken into two stages to prevent changes from first replace being themselves
     # changed by the second replace due to conflicting syntax
     comment = comment.replace('{%', 'X-HELPDESK-COMMENT-VERBATIM').replace('%}', 'X-HELPDESK-COMMENT-ENDVERBATIM')
-    comment = comment.replace('X-HELPDESK-COMMENT-VERBATIM', '{% verbatim %}{%').replace('X-HELPDESK-COMMENT-ENDVERBATIM', '%}{% endverbatim %}')
+    comment = comment.replace('X-HELPDESK-COMMENT-VERBATIM', '{% verbatim %}{%').replace(
+        'X-HELPDESK-COMMENT-ENDVERBATIM', '%}{% endverbatim %}')
     # render the neutralized template
     comment = template_func(comment).render(context)
 
@@ -565,8 +612,8 @@ def update_ticket(request, ticket_id, public=False):
     )
 
     if public and (f.comment or (
-        f.new_status in (Ticket.RESOLVED_STATUS,
-                         Ticket.CLOSED_STATUS))):
+            f.new_status in (Ticket.RESOLVED_STATUS,
+                             Ticket.CLOSED_STATUS))):
         if f.new_status == Ticket.RESOLVED_STATUS:
             template = 'resolved_'
         elif f.new_status == Ticket.CLOSED_STATUS:
@@ -618,12 +665,12 @@ def update_ticket(request, ticket_id, public=False):
             template_staff = 'updated_owner'
 
         if (not reassigned or
-                (reassigned and
-                    ticket.assigned_to.usersettings_helpdesk.settings.get(
-                        'email_on_ticket_assign', False))) or \
-            (not reassigned and
-                ticket.assigned_to.usersettings_helpdesk.settings.get(
-                    'email_on_ticket_change', False)):
+            (reassigned and
+             ticket.assigned_to.usersettings_helpdesk.settings.get(
+                 'email_on_ticket_assign', False))) or \
+                (not reassigned and
+                 ticket.assigned_to.usersettings_helpdesk.settings.get(
+                     'email_on_ticket_change', False)):
             send_templated_mail(
                 template_staff,
                 context,
@@ -1320,11 +1367,17 @@ def run_report(request, report):
 
     column_headings = [col1heading] + possible_options
 
+    # Prepare a dict to store totals for each possible option
+    totals = {}
     # Pivot the data so that 'header1' fields are always first column
     # in the row, and 'possible_options' are always the 2nd - nth columns.
     for item in header1:
         data = []
         for hdr in possible_options:
+            if hdr not in totals.keys():
+                totals[hdr] = summarytable[item, hdr]
+            else:
+                totals[hdr] += summarytable[item, hdr]
             data.append(summarytable[item, hdr])
         table.append([item] + data)
 
@@ -1343,10 +1396,16 @@ def run_report(request, report):
     for series in table:
         series_names.append(series[0])
 
+    # Add total row to table
+    total_data = ['Total']
+    for hdr in possible_options:
+        total_data.append(str(totals[hdr]))
+
     return render(request, 'helpdesk/report_output.html', {
         'title': title,
         'charttype': charttype,
         'data': table,
+        'total_data': total_data,
         'headings': column_headings,
         'series_names': series_names,
         'morrisjs_data': morrisjs_data,
@@ -1486,16 +1545,17 @@ def ticket_dependency_add(request, ticket_id):
         raise PermissionDenied()
     if not _is_my_ticket(request.user, ticket):
         raise PermissionDenied()
-    if request.method == 'POST':
-        form = TicketDependencyForm(request.POST)
-        if form.is_valid():
-            ticketdependency = form.save(commit=False)
-            ticketdependency.ticket = ticket
-            if ticketdependency.ticket != ticketdependency.depends_on:
-                ticketdependency.save()
-            return HttpResponseRedirect(reverse('helpdesk:view', args=[ticket.id]))
-    else:
-        form = TicketDependencyForm()
+
+    form = TicketDependencyForm(request.POST or None)
+    # A ticket cannot depends on itself or on a ticket already depending on it
+    form.fields['depends_on'].queryset = Ticket.objects.exclude(
+        Q(id=ticket.id) | Q(ticketdependency__depends_on=ticket)
+    )
+    if form.is_valid():
+        ticketdependency = form.save(commit=False)
+        ticketdependency.ticket = ticket
+        ticketdependency.save()
+        return HttpResponseRedirect(reverse('helpdesk:view', args=[ticket.id]))
     return render(request, 'helpdesk/ticket_dependency_add.html', {
         'ticket': ticket,
         'form': form,
