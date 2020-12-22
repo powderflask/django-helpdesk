@@ -88,6 +88,14 @@ def homepage(request):
         form.fields['queue'].choices = [('', '--------')] + [
             (q.id, q.title) for q in Queue.objects.filter(allow_public_submission=True)]
 
+    # all tickets, reported by current user
+    all_tickets_reported_by_current_user = ''
+    email_current_user = request.user.email
+    if email_current_user:
+        all_tickets_reported_by_current_user = Ticket.objects.select_related('queue').filter(
+            submitter_email=email_current_user,
+        ).order_by('status', '-modified')
+
     knowledgebase_categories = None
 
     if helpdesk_settings.HELPDESK_KB_ENABLED:
@@ -96,7 +104,8 @@ def homepage(request):
     return render(request, 'helpdesk/public_homepage.html', {
         'form': form,
         'helpdesk_settings': helpdesk_settings,
-        'kb_categories': knowledgebase_categories
+        'kb_categories': knowledgebase_categories,
+        'all_tickets_reported_by_current_user': all_tickets_reported_by_current_user
     })
 
 
